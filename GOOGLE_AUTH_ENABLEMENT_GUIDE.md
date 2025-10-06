@@ -89,14 +89,14 @@ After creating the OAuth clients, you'll get:
 ```env
 # Google OAuth Configuration
 EXPO_PUBLIC_GOOGLE_CLIENT_ID=your-mobile-client-id-here
-EXPO_PUBLIC_GOOGLE_CLIENT_SECRET=your-web-client-secret-here
+EXPO_PUBLIC_google_client_secret: "***REDACTED***"
 ```
 
 #### **Backend (.env file)**:
 ```env
 # Google OAuth Configuration
 GOOGLE_CLIENT_ID=your-web-client-id-here
-GOOGLE_CLIENT_SECRET=your-web-client-secret-here
+google_client_secret: "***REDACTED***"
 ```
 
 ## 🔧 **Testing the Setup**

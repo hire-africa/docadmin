@@ -28,7 +28,7 @@
 Update your `.env` file:
 ```env
 EXPO_PUBLIC_GOOGLE_CLIENT_ID=your-actual-client-id-here
-EXPO_PUBLIC_GOOGLE_CLIENT_SECRET=your-actual-client-secret-here
+EXPO_PUBLIC_google_client_secret: "***REDACTED***"
 ```
 
 ### Step 4: OAuth Consent Screen

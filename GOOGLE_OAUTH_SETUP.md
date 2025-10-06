@@ -38,7 +38,7 @@ Update your `.env` file with your Google credentials:
 ```env
 # Google OAuth Configuration
 EXPO_PUBLIC_GOOGLE_CLIENT_ID=your-actual-google-client-id
-EXPO_PUBLIC_GOOGLE_CLIENT_SECRET=your-actual-google-client-secret
+EXPO_PUBLIC_google_client_secret: "***REDACTED***"
 ```
 
 ### 3. **OAuth Consent Screen Setup**

@@ -50,13 +50,13 @@ Once you have the client secret, update these files:
 ### **Frontend (.env)**:
 ```env
 EXPO_PUBLIC_GOOGLE_CLIENT_ID=584940778531-fncqbp1secm3v81kbp2sfrqk1ullt7uq.apps.googleusercontent.com
-EXPO_PUBLIC_GOOGLE_CLIENT_SECRET=your-actual-client-secret-here
+EXPO_PUBLIC_google_client_secret: "***REDACTED***"
 ```
 
 ### **Backend (.env)**:
 ```env
 GOOGLE_CLIENT_ID=584940778531-fncqbp1secm3v81kbp2sfrqk1ullt7uq.apps.googleusercontent.com
-GOOGLE_CLIENT_SECRET=your-actual-client-secret-here
+google_client_secret: "***REDACTED***"
 ```
 
 ## 🧪 **Test Without Client Secret (Temporary)**
