@@ -101,7 +101,7 @@ export default function PendingDoctorsPage() {
     }
   };
 
-  const handleStatusChange = async (doctorId: number, newStatus: string) => {
+  const handleStatusChange = async (doctorId: number, newStatus: string, closeModal = false) => {
     try {
       const token = localStorage.getItem('admin_token');
       const response = await fetch(`/api/users/${doctorId}/status`, {
@@ -128,6 +128,12 @@ export default function PendingDoctorsPage() {
         }
         
         fetchPendingDoctors();
+        
+        // Close modal if requested
+        if (closeModal) {
+          setShowModal(false);
+          setSelectedDoctor(null);
+        }
       } else {
         const errorData = await response.json();
         toast.error(`Failed to update doctor status: ${errorData.message || 'Unknown error'}`);
@@ -673,19 +679,13 @@ export default function PendingDoctorsPage() {
                 {/* Action Buttons */}
                 <div className="mt-6 flex justify-end space-x-3">
                   <button
-                    onClick={() => {
-                      handleStatusChange(selectedDoctor.id, 'rejected');
-                      setShowModal(false);
-                    }}
+                    onClick={() => handleStatusChange(selectedDoctor.id, 'rejected', true)}
                     className="bg-red-600 text-white px-6 py-2 rounded-md text-sm font-medium hover:bg-red-700"
                   >
                     Reject
                   </button>
                   <button
-                    onClick={() => {
-                      handleStatusChange(selectedDoctor.id, 'approved');
-                      setShowModal(false);
-                    }}
+                    onClick={() => handleStatusChange(selectedDoctor.id, 'approved', true)}
                     className="bg-green-600 text-white px-6 py-2 rounded-md text-sm font-medium hover:bg-green-700"
                   >
                     Approve

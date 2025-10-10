@@ -222,14 +222,16 @@ export async function sendEmail(emailData: EmailData): Promise<{ success: boolea
         subject: emailData.subject,
         html: emailData.html,
         type: 'doctor_notification'
-      })
+      }),
+      // Add timeout to prevent hanging
+      signal: AbortSignal.timeout(10000) // 10 second timeout
     });
 
     if (response.ok) {
       return { success: true, message: 'Email sent successfully' };
     } else {
       console.error('Email API error:', await response.text());
-      return { success: false, message: 'Failed to send email via main app API' };
+      return { success: false, message: 'Email service temporarily unavailable' };
     }
   } catch (error) {
     console.error('Email sending error:', error);
@@ -243,7 +245,7 @@ export async function sendEmail(emailData: EmailData): Promise<{ success: boolea
     
     return { 
       success: false, 
-      message: 'Email service unavailable. Please send manually or check main app email configuration.' 
+      message: 'Email service temporarily unavailable - doctor status updated successfully' 
     };
   }
 }

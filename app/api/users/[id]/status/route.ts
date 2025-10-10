@@ -67,7 +67,7 @@ export async function PATCH(
         }
       } catch (error) {
         console.error('Email sending error:', error);
-        emailResult = { success: false, message: 'Failed to send email notification' };
+        emailResult = { success: false, message: 'Email service temporarily unavailable' };
       }
     }
 
