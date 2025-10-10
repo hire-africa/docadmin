@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken } from '@/lib/auth';
 import { query } from '@/lib/database';
+import { sendApprovalEmail, sendRejectionEmail } from '@/lib/email-service';
 
 export async function PATCH(
   request: NextRequest,
@@ -31,21 +32,49 @@ export async function PATCH(
       );
     }
 
-    const result = await query(
-      'UPDATE users SET status = $1 WHERE id = $2 RETURNING id, first_name, last_name, status',
-      [status, id]
+    // Get user details before updating
+    const userResult = await query(
+      'SELECT id, first_name, last_name, email, user_type, status FROM users WHERE id = $1',
+      [id]
     );
 
-    if (result.rows.length === 0) {
+    if (userResult.rows.length === 0) {
       return NextResponse.json(
         { message: 'User not found' },
         { status: 404 }
       );
     }
 
+    const user = userResult.rows[0];
+
+    // Update user status
+    const result = await query(
+      'UPDATE users SET status = $1 WHERE id = $2 RETURNING id, first_name, last_name, status',
+      [status, id]
+    );
+
+    // Send email notification for doctor status changes
+    let emailResult = { success: true, message: 'No email sent' };
+    
+    if (user.user_type === 'doctor' && (status === 'approved' || status === 'rejected')) {
+      const doctorName = `${user.first_name} ${user.last_name}`;
+      
+      try {
+        if (status === 'approved') {
+          emailResult = await sendApprovalEmail(doctorName, user.email);
+        } else if (status === 'rejected') {
+          emailResult = await sendRejectionEmail(doctorName, user.email);
+        }
+      } catch (error) {
+        console.error('Email sending error:', error);
+        emailResult = { success: false, message: 'Failed to send email notification' };
+      }
+    }
+
     return NextResponse.json({
       message: 'User status updated successfully',
       user: result.rows[0],
+      emailNotification: emailResult,
     });
   } catch (error) {
     console.error('User status update error:', error);
