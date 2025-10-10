@@ -82,7 +82,7 @@ export async function GET(request: NextRequest) {
       phone_number: null, // Column doesn't exist in database
       date_of_birth: row.date_of_birth,
       gender: row.gender,
-      specialization: row.specialization,
+      specialization: row.specializations,
       license_number: row.medical_licence,
       experience_years: row.years_of_experience,
       bio: row.bio || row.professional_bio,

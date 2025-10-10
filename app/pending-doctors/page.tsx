@@ -424,7 +424,10 @@ export default function PendingDoctorsPage() {
                     </div>
                   </div>
                   <button
-                    onClick={() => setShowModal(false)}
+                    onClick={() => {
+                      setShowModal(false);
+                      setSelectedDoctor(null);
+                    }}
                     className="text-gray-400 hover:text-gray-600"
                   >
                     <XCircle className="h-6 w-6" />
@@ -539,12 +542,8 @@ export default function PendingDoctorsPage() {
                   </h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700">Specialization</label>
+                      <label className="block text-sm font-medium text-gray-700">Specializations</label>
                       <p className="text-sm text-gray-900">{selectedDoctor.specialization || 'Not specified'}</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">Sub-Specialization</label>
-                      <p className="text-sm text-gray-900">{selectedDoctor.sub_specialization || 'Not specified'}</p>
                     </div>
                     {selectedDoctor.experience_years && (
                       <div>
