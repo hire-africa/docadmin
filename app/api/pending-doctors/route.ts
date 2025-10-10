@@ -57,10 +57,7 @@ export async function GET(request: NextRequest) {
         u.email_notifications_enabled, u.push_notifications_enabled, u.sms_notifications_enabled,
         u.role, u.id_document, u.professional_bio,
         u.specialization, u.sub_specialization, u.specializations,
-        u.languages_spoken, u.sub_specializations, u.years_of_experience,
-        u.phone_number, u.address, u.state, u.postal_code,
-        u.emergency_contact_name, u.emergency_contact_phone,
-        u.hospital_affiliation, u.consultation_fee, u.availability_status
+        u.languages_spoken, u.sub_specializations, u.years_of_experience
       FROM users u
       ${whereClause}
       ORDER BY u.created_at DESC
@@ -70,7 +67,7 @@ export async function GET(request: NextRequest) {
 
     const doctorsResult = await query(doctorsQuery, params);
 
-    // Format the response with all available fields
+    // Format the response with available fields
     const doctors = doctorsResult.rows.map(row => ({
       id: row.id,
       first_name: row.first_name,
@@ -82,7 +79,7 @@ export async function GET(request: NextRequest) {
       is_active: row.is_active,
       rating: row.rating,
       total_ratings: row.total_ratings || 0,
-      phone_number: row.phone_number,
+      phone_number: null, // Column doesn't exist in database
       date_of_birth: row.date_of_birth,
       gender: row.gender,
       specialization: row.specialization,
@@ -93,9 +90,9 @@ export async function GET(request: NextRequest) {
       // Additional comprehensive information
       city: row.city,
       country: row.country,
-      address: row.address,
-      state: row.state,
-      postal_code: row.postal_code,
+      address: null, // Column doesn't exist in database
+      state: null, // Column doesn't exist in database
+      postal_code: null, // Column doesn't exist in database
       display_name: row.display_name,
       national_id: row.national_id,
       medical_degree: row.medical_degree,
@@ -109,11 +106,11 @@ export async function GET(request: NextRequest) {
       specializations: row.specializations,
       languages_spoken: row.languages_spoken,
       sub_specializations: row.sub_specializations,
-      emergency_contact_name: row.emergency_contact_name,
-      emergency_contact_phone: row.emergency_contact_phone,
-      hospital_affiliation: row.hospital_affiliation,
-      consultation_fee: row.consultation_fee,
-      availability_status: row.availability_status,
+      emergency_contact_name: null, // Column doesn't exist in database
+      emergency_contact_phone: null, // Column doesn't exist in database
+      hospital_affiliation: null, // Column doesn't exist in database
+      consultation_fee: null, // Column doesn't exist in database
+      availability_status: null, // Column doesn't exist in database
       id_document: row.id_document,
       email_verified: !!row.email_verified_at,
       account_age_days: Math.floor((Date.now() - new Date(row.created_at).getTime()) / (1000 * 60 * 60 * 24))
