@@ -1,5 +1,21 @@
-// Email service for sending notifications via the main DocAvailable app
+// Email service for sending notifications directly via SMTP
+import nodemailer from 'nodemailer';
+
 const MAIN_APP_URL = 'https://docavailable.3vbdv.ondigitalocean.app';
+
+// Create transporter using the main app's email configuration
+const transporter = nodemailer.createTransporter({
+  host: 'smtp.gmail.com',
+  port: 587,
+  secure: false, // true for 465, false for other ports
+  auth: {
+    user: 'Docavailable01@gmail.com',
+    pass: 'sdekzppdxdknhlkd'
+  },
+  tls: {
+    rejectUnauthorized: false
+  }
+});
 
 interface EmailData {
   to: string;
@@ -208,31 +224,19 @@ export const emailTemplates = {
   })
 };
 
-// Function to send email via the main DocAvailable app
+// Function to send email directly via SMTP
 export async function sendEmail(emailData: EmailData): Promise<{ success: boolean; message: string }> {
   try {
-    // Try to call the main app's email API
-    const response = await fetch(`${MAIN_APP_URL}/api/send-email`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        to: emailData.to,
-        subject: emailData.subject,
-        html: emailData.html,
-        type: 'doctor_notification'
-      }),
-      // Add timeout to prevent hanging
-      signal: AbortSignal.timeout(10000) // 10 second timeout
+    // Send email directly using nodemailer
+    const info = await transporter.sendMail({
+      from: '"DocAvailable" <Docavailable01@gmail.com>',
+      to: emailData.to,
+      subject: emailData.subject,
+      html: emailData.html
     });
 
-    if (response.ok) {
-      return { success: true, message: 'Email sent successfully' };
-    } else {
-      console.error('Email API error:', await response.text());
-      return { success: false, message: 'Email service temporarily unavailable' };
-    }
+    console.log('Email sent successfully:', info.messageId);
+    return { success: true, message: 'Email sent successfully' };
   } catch (error) {
     console.error('Email sending error:', error);
     
