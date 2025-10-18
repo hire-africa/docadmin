@@ -1,6 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken } from '@/lib/auth';
-import { query } from '@/lib/database';
+
+// Admin accounts from lib/auth.ts
+const ADMIN_ACCOUNTS = [
+  {
+    id: 'admin-1',
+    email: 'blacksleeky84@gmail.com',
+    name: 'Praise Mtosa',
+    role: 'admin'
+  },
+  {
+    id: 'admin-2',
+    email: 'admin@docavailable.com',
+    name: 'System Admin',
+    role: 'admin'
+  },
+  {
+    id: 'admin-3',
+    email: 'macnyoni4@gmail.com',
+    name: 'Mac Nyoni',
+    role: 'admin'
+  }
+];
 
 export async function GET(request: NextRequest) {
   try {
@@ -10,65 +31,16 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
 
-    // Get all admin users - try different approaches
-    const adminsQuery = `
-      SELECT 
-        id,
-        first_name,
-        last_name,
-        email,
-        user_type,
-        role
-      FROM users
-      WHERE user_type = 'admin' OR role = 'admin' OR user_type = 'Admin' OR role = 'Admin'
-      ORDER BY first_name, last_name
-    `;
-
-    const result = await query(adminsQuery);
-    
-    console.log('Admins query result:', result.rows);
-
-    // If no admins found, let's try to get all users to see what we have
-    if (result.rows.length === 0) {
-      const allUsersQuery = `
-        SELECT 
-          id,
-          first_name,
-          last_name,
-          email,
-          user_type,
-          role
-        FROM users
-        ORDER BY first_name, last_name
-        LIMIT 10
-      `;
-      
-      const allUsersResult = await query(allUsersQuery);
-      console.log('Sample users:', allUsersResult.rows);
-      
-      // For now, return all users as potential admins for testing
-      const fallbackAdmins = allUsersResult.rows.map(row => ({
-        id: row.id,
-        first_name: row.first_name,
-        last_name: row.last_name,
-        email: row.email,
-        full_name: `${row.first_name} ${row.last_name}`
-      }));
-      
-      return NextResponse.json({
-        admins: fallbackAdmins,
-        totalCount: fallbackAdmins.length,
-        note: 'No admin users found, showing all users as fallback'
-      });
-    }
-
-    const admins = result.rows.map(row => ({
-      id: row.id,
-      first_name: row.first_name,
-      last_name: row.last_name,
-      email: row.email,
-      full_name: `${row.first_name} ${row.last_name}`
+    // Return hardcoded admin accounts
+    const admins = ADMIN_ACCOUNTS.map(admin => ({
+      id: admin.id,
+      first_name: admin.name.split(' ')[0],
+      last_name: admin.name.split(' ').slice(1).join(' '),
+      email: admin.email,
+      full_name: admin.name
     }));
+
+    console.log('Returning hardcoded admins:', admins);
 
     return NextResponse.json({
       admins,
