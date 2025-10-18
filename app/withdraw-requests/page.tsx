@@ -321,9 +321,9 @@ export default function WithdrawRequestsPage() {
                        'Mzunguko'}
                     </div>
                     <div className="text-sm text-gray-500">
-                      {request.payment_method === 'bank_transfer' && request.payment_details.bank_name}
+                      {request.payment_method === 'bank_transfer' && (request.bank_name || request.payment_details?.bank_name || 'Bank Transfer')}
                       {request.payment_method === 'mobile_money' && 
-                        `${request.payment_details.mobile_provider === 'airtel' ? 'Airtel Money' : 'TNM Mpamba'}`}
+                        `${request.mobile_provider === 'airtel' ? 'Airtel Money' : 'TNM Mpamba'}`}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -423,11 +423,11 @@ export default function WithdrawRequestsPage() {
                     
                     {selectedRequest.payment_method === 'bank_transfer' && (
                       <>
-                        {selectedRequest.bank_name && (
+                        {(selectedRequest.bank_name || selectedRequest.payment_details?.bank_name) && (
                           <div className="flex items-center">
                             <Building className="h-4 w-4 text-gray-400 mr-2" />
                             <span className="text-sm text-gray-600">Bank: </span>
-                            <span className="ml-1 font-medium">{selectedRequest.bank_name}</span>
+                            <span className="ml-1 font-medium">{selectedRequest.bank_name || selectedRequest.payment_details?.bank_name}</span>
                           </div>
                         )}
                         {selectedRequest.account_number && (
@@ -460,14 +460,14 @@ export default function WithdrawRequestsPage() {
                           <Phone className="h-4 w-4 text-gray-400 mr-2" />
                           <span className="text-sm text-gray-600">Provider: </span>
                           <span className="ml-1 font-medium">
-                            {selectedRequest.mobile_provider === 'airtel' ? 'Airtel Money' : 'TNM Mpamba'}
+                            {(selectedRequest.mobile_provider || selectedRequest.payment_details?.mobile_provider) === 'airtel' ? 'Airtel Money' : 'TNM Mpamba'}
                           </span>
                         </div>
-                        {selectedRequest.mobile_number && (
+                        {(selectedRequest.mobile_number || selectedRequest.payment_details?.mobile_number) && (
                           <div className="flex items-center">
                             <Phone className="h-4 w-4 text-gray-400 mr-2" />
                             <span className="text-sm text-gray-600">Number: </span>
-                            <span className="ml-1 font-medium">{selectedRequest.mobile_number}</span>
+                            <span className="ml-1 font-medium">{selectedRequest.mobile_number || selectedRequest.payment_details?.mobile_number}</span>
                           </div>
                         )}
                       </>
