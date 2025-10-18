@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const validation = await validateAdminCredentials(email, password);
+    const validation = validateAdminCredentials(email, password);
     if (!validation.valid) {
       return NextResponse.json(
         { message: 'Invalid credentials' },

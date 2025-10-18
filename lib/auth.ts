@@ -40,60 +40,39 @@ export async function comparePassword(password: string, hash: string): Promise<b
   return bcrypt.compare(password, hash);
 }
 
-// Admin authentication using database
-export async function validateAdminCredentials(email: string, password: string): Promise<{ valid: boolean; admin?: any }> {
-  try {
-    const { query } = await import('./database');
-    
-    const adminQuery = `
-      SELECT id, email, password, name, role, is_active
-      FROM admins
-      WHERE email = $1 AND is_active = true
-    `;
-    
-    const result = await query(adminQuery, [email]);
-    
-    if (result.rows.length === 0) {
-      return { valid: false };
-    }
-    
-    const admin = result.rows[0];
-    
-    // Compare password (assuming passwords are stored as plain text for now)
-    // In production, you should hash passwords and use bcrypt.compare
-    if (admin.password === password) {
-      return { 
-        valid: true, 
-        admin: {
-          id: admin.id,
-          email: admin.email,
-          name: admin.name,
-          role: admin.role
-        }
-      };
-    }
-    
-    return { valid: false };
-  } catch (error) {
-    console.error('Error validating admin credentials:', error);
-    return { valid: false };
+// Admin accounts configuration (hardcoded for now)
+const ADMIN_ACCOUNTS = [
+  {
+    email: 'blacksleeky84@gmail.com',
+    password: 'PraiseAdmin2024!',
+    name: 'Praise Mtosa',
+    role: 'admin'
+  },
+  {
+    email: 'admin@docavailable.com',
+    password: 'admin123',
+    name: 'System Admin',
+    role: 'admin'
+  },
+  {
+    email: 'macnyoni4@gmail.com',
+    password: 'MacAdmin2025!',
+    name: 'Mac Nyoni',
+    role: 'admin'
   }
+];
+
+export function validateAdminCredentials(email: string, password: string): { valid: boolean; admin?: any } {
+  const admin = ADMIN_ACCOUNTS.find(acc => acc.email === email && acc.password === password);
+  
+  if (admin) {
+    return { valid: true, admin };
+  }
+  
+  return { valid: false };
 }
 
 // Check if email is used for admin account
-export async function isAdminEmail(email: string): Promise<boolean> {
-  try {
-    const { query } = await import('./database');
-    
-    const adminQuery = `
-      SELECT id FROM admins
-      WHERE email = $1 AND is_active = true
-    `;
-    
-    const result = await query(adminQuery, [email]);
-    return result.rows.length > 0;
-  } catch (error) {
-    console.error('Error checking admin email:', error);
-    return false;
-  }
+export function isAdminEmail(email: string): boolean {
+  return ADMIN_ACCOUNTS.some(acc => acc.email === email);
 }
