@@ -21,18 +21,20 @@ interface WithdrawRequest {
   id: string;
   doctor_id: string;
   amount: number;
-  currency: string;
   payment_method: string;
-  payment_details: {
-    bank_name?: string;
-    account_number?: string;
-    bank_branch?: string;
-    mobile_provider?: string;
-    mobile_number?: string;
-    mzunguko_full_name?: string;
-    mzunguko_email?: string;
-  };
+  payment_details: any;
   status: 'pending' | 'completed' | 'failed';
+  account_number?: string;
+  bank_name?: string;
+  account_holder_name?: string;
+  mobile_provider?: string;
+  mobile_number?: string;
+  bank_branch?: string;
+  rejection_reason?: string;
+  approved_at?: string;
+  paid_at?: string;
+  approved_by?: string;
+  paid_by?: string;
   created_at: string;
   updated_at: string;
   doctor: {
@@ -109,9 +111,10 @@ export default function WithdrawRequestsPage() {
     }
   };
 
-  const formatCurrency = (amount: number, currency: string) => {
-    const locale = currency === 'MWK' ? 'en-MW' : 'en-US';
-    const currencyCode = currency === 'MWK' ? 'MWK' : 'USD';
+  const formatCurrency = (amount: number) => {
+    // Default to MWK for now, you can modify this based on your needs
+    const locale = 'en-MW';
+    const currencyCode = 'MWK';
     
     return new Intl.NumberFormat(locale, {
       style: 'currency',
@@ -309,7 +312,7 @@ export default function WithdrawRequestsPage() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm font-medium text-gray-900">
-                      {formatCurrency(request.amount, request.currency)}
+                      {formatCurrency(request.amount)}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -401,7 +404,7 @@ export default function WithdrawRequestsPage() {
                 <div className="bg-gray-50 p-4 rounded-lg">
                   <h4 className="font-medium text-gray-900 mb-2">Amount</h4>
                   <p className="text-2xl font-bold text-green-600">
-                    {formatCurrency(selectedRequest.amount, selectedRequest.currency)}
+                    {formatCurrency(selectedRequest.amount)}
                   </p>
                 </div>
 
@@ -421,25 +424,32 @@ export default function WithdrawRequestsPage() {
                     
                     {selectedRequest.payment_method === 'bank_transfer' && (
                       <>
-                        {selectedRequest.payment_details.bank_name && (
+                        {selectedRequest.bank_name && (
                           <div className="flex items-center">
                             <Building className="h-4 w-4 text-gray-400 mr-2" />
                             <span className="text-sm text-gray-600">Bank: </span>
-                            <span className="ml-1 font-medium">{selectedRequest.payment_details.bank_name}</span>
+                            <span className="ml-1 font-medium">{selectedRequest.bank_name}</span>
                           </div>
                         )}
-                        {selectedRequest.payment_details.account_number && (
+                        {selectedRequest.account_number && (
                           <div className="flex items-center">
                             <DollarSign className="h-4 w-4 text-gray-400 mr-2" />
                             <span className="text-sm text-gray-600">Account: </span>
-                            <span className="ml-1 font-medium">{selectedRequest.payment_details.account_number}</span>
+                            <span className="ml-1 font-medium">{selectedRequest.account_number}</span>
                           </div>
                         )}
-                        {selectedRequest.payment_details.bank_branch && (
+                        {selectedRequest.bank_branch && (
                           <div className="flex items-center">
                             <Building className="h-4 w-4 text-gray-400 mr-2" />
                             <span className="text-sm text-gray-600">Branch: </span>
-                            <span className="ml-1 font-medium">{selectedRequest.payment_details.bank_branch}</span>
+                            <span className="ml-1 font-medium">{selectedRequest.bank_branch}</span>
+                          </div>
+                        )}
+                        {selectedRequest.account_holder_name && (
+                          <div className="flex items-center">
+                            <User className="h-4 w-4 text-gray-400 mr-2" />
+                            <span className="text-sm text-gray-600">Account Holder: </span>
+                            <span className="ml-1 font-medium">{selectedRequest.account_holder_name}</span>
                           </div>
                         )}
                       </>
@@ -451,14 +461,14 @@ export default function WithdrawRequestsPage() {
                           <Phone className="h-4 w-4 text-gray-400 mr-2" />
                           <span className="text-sm text-gray-600">Provider: </span>
                           <span className="ml-1 font-medium">
-                            {selectedRequest.payment_details.mobile_provider === 'airtel' ? 'Airtel Money' : 'TNM Mpamba'}
+                            {selectedRequest.mobile_provider === 'airtel' ? 'Airtel Money' : 'TNM Mpamba'}
                           </span>
                         </div>
-                        {selectedRequest.payment_details.mobile_number && (
+                        {selectedRequest.mobile_number && (
                           <div className="flex items-center">
                             <Phone className="h-4 w-4 text-gray-400 mr-2" />
                             <span className="text-sm text-gray-600">Number: </span>
-                            <span className="ml-1 font-medium">{selectedRequest.payment_details.mobile_number}</span>
+                            <span className="ml-1 font-medium">{selectedRequest.mobile_number}</span>
                           </div>
                         )}
                       </>
@@ -466,14 +476,14 @@ export default function WithdrawRequestsPage() {
                     
                     {selectedRequest.payment_method === 'mzunguko' && (
                       <>
-                        {selectedRequest.payment_details.mzunguko_full_name && (
+                        {selectedRequest.payment_details?.mzunguko_full_name && (
                           <div className="flex items-center">
                             <User className="h-4 w-4 text-gray-400 mr-2" />
                             <span className="text-sm text-gray-600">Name: </span>
                             <span className="ml-1 font-medium">{selectedRequest.payment_details.mzunguko_full_name}</span>
                           </div>
                         )}
-                        {selectedRequest.payment_details.mzunguko_email && (
+                        {selectedRequest.payment_details?.mzunguko_email && (
                           <div className="flex items-center">
                             <User className="h-4 w-4 text-gray-400 mr-2" />
                             <span className="text-sm text-gray-600">Email: </span>

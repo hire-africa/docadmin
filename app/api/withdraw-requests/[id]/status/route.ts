@@ -23,16 +23,16 @@ export async function PATCH(
       );
     }
 
-    // First, get the withdrawal request details from doctor_withdraws
+    // First, get the withdrawal request details from withdrawal_requests
     const getRequestQuery = `
       SELECT 
-        dw.*,
+        wr.*,
         u.first_name,
         u.last_name,
         u.email
-      FROM doctor_withdraws dw
-      LEFT JOIN users u ON dw.doctor_id = u.id
-      WHERE dw.id = $1
+      FROM withdrawal_requests wr
+      LEFT JOIN users u ON wr.doctor_id = u.id
+      WHERE wr.id = $1
     `;
 
     const requestResult = await query(getRequestQuery, [id]);
@@ -48,7 +48,7 @@ export async function PATCH(
 
     // Update the withdrawal request status
     const updateRequestQuery = `
-      UPDATE doctor_withdraws 
+      UPDATE withdrawal_requests 
       SET status = $1, updated_at = NOW()
       WHERE id = $2
       RETURNING *
@@ -88,7 +88,7 @@ export async function PATCH(
       // Add a transaction record to the wallet transactions
       const addTransactionQuery = `
         INSERT INTO wallet_transactions (
-          wallet_id, 
+          doctor_id,
           type, 
           amount, 
           description, 
@@ -96,16 +96,15 @@ export async function PATCH(
           created_at, 
           updated_at
         )
-        SELECT 
-          dw.id,
+        VALUES (
+          $3,
           'debit',
           $1,
           'Withdrawal processed - ' || $2,
           'completed',
           NOW(),
           NOW()
-        FROM doctor_wallets dw
-        WHERE dw.doctor_id = $3
+        )
       `;
       
       await query(addTransactionQuery, [
