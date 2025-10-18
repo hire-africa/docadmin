@@ -432,12 +432,6 @@ export default function WithdrawRequestsPage() {
                       <p className="text-sm text-gray-600">Email</p>
                       <p className="font-medium">{selectedRequest.doctor.email}</p>
                     </div>
-                    {selectedRequest.doctor.phone_number && (
-                      <div>
-                        <p className="text-sm text-gray-600">Phone</p>
-                        <p className="font-medium">{selectedRequest.doctor.phone_number}</p>
-                      </div>
-                    )}
                   </div>
                 </div>
 
