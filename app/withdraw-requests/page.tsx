@@ -45,6 +45,14 @@ interface WithdrawRequest {
   };
 }
 
+interface Admin {
+  id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  full_name: string;
+}
+
 export default function WithdrawRequestsPage() {
   const [withdrawRequests, setWithdrawRequests] = useState<WithdrawRequest[]>([]);
   const [loading, setLoading] = useState(true);
@@ -53,10 +61,32 @@ export default function WithdrawRequestsPage() {
   const [selectedRequest, setSelectedRequest] = useState<WithdrawRequest | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [processing, setProcessing] = useState<string | null>(null);
+  const [admins, setAdmins] = useState<Admin[]>([]);
+  const [selectedAdminId, setSelectedAdminId] = useState<string>('');
 
   useEffect(() => {
     fetchWithdrawRequests();
+    fetchAdmins();
   }, []);
+
+  const fetchAdmins = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('/api/admins', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setAdmins(data.admins);
+      }
+    } catch (error) {
+      console.error('Error fetching admins:', error);
+    }
+  };
 
   const fetchWithdrawRequests = async () => {
     try {
@@ -83,6 +113,12 @@ export default function WithdrawRequestsPage() {
   };
 
   const handleStatusUpdate = async (requestId: string, newStatus: 'completed' | 'failed') => {
+    // For completed status, require admin selection
+    if (newStatus === 'completed' && !selectedAdminId) {
+      toast.error('Please select an admin who completed the transaction');
+      return;
+    }
+    
     try {
       setProcessing(requestId);
       const token = localStorage.getItem('admin_token');
@@ -92,7 +128,10 @@ export default function WithdrawRequestsPage() {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ status: newStatus }),
+        body: JSON.stringify({ 
+          status: newStatus,
+          completed_by: newStatus === 'completed' ? selectedAdminId : null
+        }),
       });
 
       if (response.ok) {
@@ -100,6 +139,7 @@ export default function WithdrawRequestsPage() {
         fetchWithdrawRequests();
         setShowModal(false);
         setSelectedRequest(null);
+        setSelectedAdminId('');
       } else {
         toast.error('Failed to update withdrawal request status');
       }
@@ -504,6 +544,36 @@ export default function WithdrawRequestsPage() {
                     <span className="ml-1 capitalize">{selectedRequest.status}</span>
                   </span>
                 </div>
+
+                {/* Admin Selection for Completed Status */}
+                {selectedRequest.status === 'pending' && (
+                  <div className="bg-gray-50 p-4 rounded-lg">
+                    <h4 className="font-medium text-gray-900 mb-2">Admin Assignment</h4>
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium text-gray-700">
+                        Who will complete this transaction?
+                      </label>
+                      <select
+                        value={selectedAdminId}
+                        onChange={(e) => setSelectedAdminId(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                        required
+                      >
+                        <option value="">Select an admin...</option>
+                        {admins.map((admin) => (
+                          <option key={admin.id} value={admin.id}>
+                            {admin.full_name} ({admin.email})
+                          </option>
+                        ))}
+                      </select>
+                      {!selectedAdminId && (
+                        <p className="text-sm text-red-600">
+                          Please select an admin before marking as completed
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
 
                 {/* Actions */}
                 {selectedRequest.status === 'pending' && (

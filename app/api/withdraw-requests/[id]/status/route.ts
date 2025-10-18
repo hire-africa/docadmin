@@ -14,11 +14,19 @@ export async function PATCH(
     }
 
     const { id } = params;
-    const { status } = await request.json();
+    const { status, completed_by } = await request.json();
 
     if (!status || !['completed', 'failed'].includes(status)) {
       return NextResponse.json(
         { message: 'Invalid status. Must be "completed" or "failed"' },
+        { status: 400 }
+      );
+    }
+
+    // For completed status, require completed_by
+    if (status === 'completed' && !completed_by) {
+      return NextResponse.json(
+        { message: 'completed_by is required for completed status' },
         { status: 400 }
       );
     }
@@ -49,12 +57,12 @@ export async function PATCH(
     // Update the withdrawal request status
     const updateRequestQuery = `
       UPDATE withdrawal_requests 
-      SET status = $1, updated_at = NOW()
+      SET status = $1, updated_at = NOW(), paid_by = $3, paid_at = NOW()
       WHERE id = $2
       RETURNING *
     `;
 
-    await query(updateRequestQuery, [status, id]);
+    await query(updateRequestQuery, [status, id, completed_by]);
 
     // If status is completed, we need to update the doctor's wallet
     if (status === 'completed') {
