@@ -1,27 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken } from '@/lib/auth';
-
-// Admin accounts from lib/auth.ts
-const ADMIN_ACCOUNTS = [
-  {
-    id: 'admin-1',
-    email: 'blacksleeky84@gmail.com',
-    name: 'Praise Mtosa',
-    role: 'admin'
-  },
-  {
-    id: 'admin-2',
-    email: 'admin@docavailable.com',
-    name: 'System Admin',
-    role: 'admin'
-  },
-  {
-    id: 'admin-3',
-    email: 'macnyoni4@gmail.com',
-    name: 'Mac Nyoni',
-    role: 'admin'
-  }
-];
+import { query } from '@/lib/database';
 
 export async function GET(request: NextRequest) {
   try {
@@ -31,16 +10,32 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
 
-    // Return hardcoded admin accounts
-    const admins = ADMIN_ACCOUNTS.map(admin => ({
-      id: admin.id,
-      first_name: admin.name.split(' ')[0],
-      last_name: admin.name.split(' ').slice(1).join(' '),
-      email: admin.email,
-      full_name: admin.name
+    // Get all admin users from admins table
+    const adminsQuery = `
+      SELECT 
+        id,
+        email,
+        name,
+        role,
+        is_active
+      FROM admins
+      WHERE is_active = true
+      ORDER BY name
+    `;
+
+    const result = await query(adminsQuery);
+    
+    console.log('Admins query result:', result.rows);
+
+    const admins = result.rows.map(row => ({
+      id: row.id.toString(),
+      first_name: row.name.split(' ')[0],
+      last_name: row.name.split(' ').slice(1).join(' '),
+      email: row.email,
+      full_name: row.name
     }));
 
-    console.log('Returning hardcoded admins:', admins);
+    console.log('Returning admins from database:', admins);
 
     return NextResponse.json({
       admins,
