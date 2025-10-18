@@ -34,8 +34,7 @@ export async function GET(request: NextRequest) {
         wr.updated_at,
         u.first_name,
         u.last_name,
-        u.email,
-        u.phone_number
+        u.email
       FROM withdrawal_requests wr
       LEFT JOIN users u ON wr.doctor_id = u.id
       ORDER BY wr.created_at DESC
@@ -66,8 +65,7 @@ export async function GET(request: NextRequest) {
       doctor: {
         first_name: row.first_name || 'Unknown',
         last_name: row.last_name || 'Doctor',
-        email: row.email || 'No email',
-        phone_number: row.phone_number
+        email: row.email || 'No email'
       }
     }));
 
