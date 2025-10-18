@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Layout from '@/components/Layout';
 import { 
   CreditCard, 
   Search, 
@@ -173,7 +174,8 @@ export default function WithdrawRequestsPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <Layout>
+      <div className="space-y-6">
       {/* Header */}
       <div className="bg-white shadow rounded-lg p-6">
         <div className="flex items-center justify-between">
@@ -537,6 +539,7 @@ export default function WithdrawRequestsPage() {
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </Layout>
   );
 }
