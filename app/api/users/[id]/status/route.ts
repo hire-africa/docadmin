@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken } from '@/lib/auth';
 import { query } from '@/lib/database';
-import { sendApprovalEmail, sendRejectionEmail } from '@/lib/email-service';
 
 export async function PATCH(
   request: NextRequest,
@@ -53,23 +52,8 @@ export async function PATCH(
       [status, id]
     );
 
-    // Send email notification for doctor status changes
-    let emailResult = { success: true, message: 'No email sent' };
-    
-    if (user.user_type === 'doctor' && (status === 'approved' || status === 'rejected')) {
-      const doctorName = `${user.first_name} ${user.last_name}`;
-      
-      try {
-        if (status === 'approved') {
-          emailResult = await sendApprovalEmail(doctorName, user.email);
-        } else if (status === 'rejected') {
-          emailResult = await sendRejectionEmail(doctorName, user.email);
-        }
-      } catch (error) {
-        console.error('Email sending error:', error);
-        emailResult = { success: false, message: 'Email service temporarily unavailable' };
-      }
-    }
+    // Email service is temporarily disabled
+    const emailResult = { success: false, message: 'Email service temporarily disabled' };
 
     return NextResponse.json({
       message: 'User status updated successfully',
