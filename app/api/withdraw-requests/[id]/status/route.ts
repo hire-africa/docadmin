@@ -23,16 +23,16 @@ export async function PATCH(
       );
     }
 
-    // First, get the withdrawal request details
+    // First, get the withdrawal request details from doctor_withdraws
     const getRequestQuery = `
       SELECT 
-        wr.*,
+        dw.*,
         u.first_name,
         u.last_name,
         u.email
-      FROM withdrawal_requests wr
-      LEFT JOIN users u ON wr.doctor_id = u.id
-      WHERE wr.id = $1
+      FROM doctor_withdraws dw
+      LEFT JOIN users u ON dw.doctor_id = u.id
+      WHERE dw.id = $1
     `;
 
     const requestResult = await query(getRequestQuery, [id]);
@@ -48,7 +48,7 @@ export async function PATCH(
 
     // Update the withdrawal request status
     const updateRequestQuery = `
-      UPDATE withdrawal_requests 
+      UPDATE doctor_withdraws 
       SET status = $1, updated_at = NOW()
       WHERE id = $2
       RETURNING *

@@ -10,25 +10,25 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
 
-    // Get withdrawal requests with doctor information
+    // Get withdrawal requests from doctor_withdraws table
     const withdrawRequestsQuery = `
       SELECT 
-        wr.id,
-        wr.doctor_id,
-        wr.amount,
-        wr.currency,
-        wr.payment_method,
-        wr.payment_details,
-        wr.status,
-        wr.created_at,
-        wr.updated_at,
+        dw.id,
+        dw.doctor_id,
+        dw.amount,
+        dw.currency,
+        dw.payment_method,
+        dw.payment_details,
+        dw.status,
+        dw.created_at,
+        dw.updated_at,
         u.first_name,
         u.last_name,
         u.email,
         u.phone_number
-      FROM withdrawal_requests wr
-      LEFT JOIN users u ON wr.doctor_id = u.id
-      ORDER BY wr.created_at DESC
+      FROM doctor_withdraws dw
+      LEFT JOIN users u ON dw.doctor_id = u.id
+      ORDER BY dw.created_at DESC
     `;
 
     const result = await query(withdrawRequestsQuery);
