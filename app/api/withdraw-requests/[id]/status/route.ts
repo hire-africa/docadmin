@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken } from '@/lib/auth';
 import { query } from '@/lib/database';
+import { NextRequest, NextResponse } from 'next/server';
 
 export async function PATCH(
   request: NextRequest,
@@ -29,6 +29,39 @@ export async function PATCH(
         { message: 'completed_by is required for completed status' },
         { status: 400 }
       );
+    }
+
+    // Get the actual admin user ID from the database if completed_by is provided
+    let adminUserId = null;
+    if (completed_by) {
+      // Map hardcoded admin IDs to actual user IDs in the database
+      const adminEmailMap: { [key: string]: string } = {
+        'admin-1': 'blacksleeky84@gmail.com',
+        'admin-2': 'admin@docavailable.com', 
+        'admin-3': 'macnyoni4@gmail.com'
+      };
+      
+      const adminEmail = adminEmailMap[completed_by];
+      if (adminEmail) {
+        try {
+          const adminQuery = `SELECT id FROM users WHERE email = $1 AND user_type = 'admin'`;
+          const adminResult = await query(adminQuery, [adminEmail]);
+          if (adminResult.rows.length > 0) {
+            adminUserId = adminResult.rows[0].id;
+          } else {
+            console.log(`Admin user not found in database for email: ${adminEmail}. Proceeding with NULL paid_by.`);
+            // Continue with adminUserId = null (will be stored as NULL in database)
+          }
+        } catch (error) {
+          console.log(`Error looking up admin user: ${error.message}. Proceeding with NULL paid_by.`);
+          // Continue with adminUserId = null (will be stored as NULL in database)
+        }
+      } else {
+        return NextResponse.json(
+          { message: 'Invalid admin ID provided' },
+          { status: 400 }
+        );
+      }
     }
 
     // First, get the withdrawal request details from withdrawal_requests
@@ -62,7 +95,7 @@ export async function PATCH(
       RETURNING *
     `;
 
-    await query(updateRequestQuery, [status, id, completed_by]);
+    await query(updateRequestQuery, [status, id, adminUserId]);
 
     // If status is completed, we need to update the doctor's wallet
     if (status === 'completed') {
@@ -121,6 +154,35 @@ export async function PATCH(
         withdrawalRequest.payment_method === 'mobile_money' ? 'Mobile Money' : 'Mzunguko',
         withdrawalRequest.doctor_id
       ]);
+
+      // Send email notification to doctor
+      try {
+        const emailResponse = await fetch(`${process.env.BACKEND_URL}/api/admin/withdrawal-requests/send-completion-email`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${process.env.ADMIN_API_TOKEN || 'your-admin-token'}` // You'll need to set this in your .env
+          },
+          body: JSON.stringify({
+            doctor_email: withdrawalRequest.email,
+            doctor_name: `${withdrawalRequest.first_name} ${withdrawalRequest.last_name}`,
+            amount: withdrawalRequest.amount,
+            payment_method: withdrawalRequest.payment_method,
+            bank_name: withdrawalRequest.bank_name,
+            account_holder_name: withdrawalRequest.account_holder_name,
+            completed_at: new Date().toISOString()
+          })
+        });
+
+        if (emailResponse.ok) {
+          console.log('Withdrawal completion email sent successfully');
+        } else {
+          console.error('Failed to send withdrawal completion email:', await emailResponse.text());
+        }
+      } catch (error) {
+        console.error('Error sending withdrawal completion email:', error);
+        // Don't fail the withdrawal completion if email fails
+      }
     }
 
     return NextResponse.json({

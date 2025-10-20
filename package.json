@@ -9,7 +9,8 @@
     "start": "node server.js",
     "lint": "next lint",
     "create-admin": "node scripts/create-admin-user.js",
-    "create-admins-table": "node scripts/create-admins-table.js"
+    "create-admins-table": "node scripts/create-admins-table.js",
+    "migrate-admins": "node scripts/migrate-admins-to-db.js"
   },
   "dependencies": {
     "@types/bcryptjs": "^2.4.0",
