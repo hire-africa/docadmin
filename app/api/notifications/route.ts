@@ -1,7 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 // Mock notification storage - in real app, this would be a database
-let notifications: any[] = [];
+let notifications: any[] = [
+  {
+    id: '1',
+    title: 'Welcome to DocAvailable Admin',
+    message: 'You can now send notifications to users, doctors, and patients from this admin panel.',
+    type: 'system',
+    recipientType: 'all',
+    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
+    isRead: false,
+    sentBy: 'System'
+  },
+  {
+    id: '2',
+    title: 'System Maintenance Scheduled',
+    message: 'The app will be under maintenance from 2:00 AM to 4:00 AM EST tomorrow.',
+    type: 'system',
+    recipientType: 'all',
+    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
+    isRead: false,
+    sentBy: 'Admin'
+  }
+];
 
 // CORS headers for mobile app access
 const corsHeaders = {
@@ -15,11 +36,15 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const userType = searchParams.get('userType');
     const userId = searchParams.get('userId');
+    const isAdmin = request.headers.get('authorization')?.includes('Bearer');
 
     // Filter notifications based on user type and ID
     let filteredNotifications = notifications;
 
-    if (userType) {
+    // If it's an admin request, return all notifications
+    if (isAdmin) {
+      filteredNotifications = notifications;
+    } else if (userType) {
       filteredNotifications = notifications.filter(notification => {
         if (!notification.recipientType) return true;
         

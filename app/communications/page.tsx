@@ -62,7 +62,6 @@ export default function CommunicationsPage() {
   const [notifications, setNotifications] = useState<NotificationTemplate[]>([]);
   const [loading, setLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
-  const [showHistory, setShowHistory] = useState(false);
   
   // Form state
   const [selectedIcon, setSelectedIcon] = useState(NOTIFICATION_ICONS[0]);
@@ -109,26 +108,17 @@ export default function CommunicationsPage() {
             sentBy: n.sentBy
           }));
           setNotifications(templateNotifications);
+        } else {
+          console.error('API returned error:', data.error);
+          setNotifications([]);
         }
       } else {
-        console.error('Failed to load notifications');
-        // Fallback to mock data
-        const mockNotifications: NotificationTemplate[] = [
-          {
-            id: '1',
-            title: 'System Maintenance',
-            message: 'The app will be under maintenance from 2:00 AM to 4:00 AM EST.',
-            icon: 'wrench',
-            type: 'system',
-            recipientType: 'all',
-            sentAt: new Date(Date.now() - 1000 * 60 * 60 * 2),
-            sentBy: 'Admin'
-          }
-        ];
-        setNotifications(mockNotifications);
+        console.error('Failed to load notifications, status:', response.status);
+        setNotifications([]);
       }
     } catch (error) {
       console.error('Error loading notification history:', error);
+      setNotifications([]);
     } finally {
       setLoading(false);
     }
@@ -172,39 +162,26 @@ export default function CommunicationsPage() {
         }),
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success) {
-          // Create notification template for local history
-          const notification: NotificationTemplate = {
-            id: data.notification.id,
-            title: data.notification.title,
-            message: data.notification.message,
-            icon: getIconNameFromType(data.notification.type),
-            type: data.notification.type,
-            recipientType: data.notification.recipientType,
-            recipientId: data.notification.recipientId,
-            sentAt: new Date(data.notification.timestamp),
-            sentBy: data.notification.sentBy
-          };
-          
-          // Add to local history
-          setNotifications(prev => [notification, ...prev]);
-          
-          // Reset form
-          setTitle('');
-          setMessage('');
-          setSpecificUserId('');
-          setShowForm(false);
-          
-          toast.success('Notification sent successfully!');
-        } else {
-          toast.error(data.error || 'Failed to send notification');
-        }
-      } else {
-        const errorData = await response.json();
-        toast.error(errorData.error || 'Failed to send notification');
-      }
+       if (response.ok) {
+         const data = await response.json();
+         if (data.success) {
+           // Reset form
+           setTitle('');
+           setMessage('');
+           setSpecificUserId('');
+           setShowForm(false);
+           
+           // Reload notifications to show the new one
+           await loadNotificationHistory();
+           
+           toast.success('Notification sent successfully!');
+         } else {
+           toast.error(data.error || 'Failed to send notification');
+         }
+       } else {
+         const errorData = await response.json();
+         toast.error(errorData.error || 'Failed to send notification');
+       }
     } catch (error) {
       console.error('Error sending notification:', error);
       toast.error('Failed to send notification. Please try again.');
@@ -276,11 +253,12 @@ export default function CommunicationsPage() {
           <div className="mt-4 flex md:mt-0 md:ml-4">
             <button
               type="button"
-              onClick={() => setShowHistory(!showHistory)}
-              className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+              onClick={() => loadNotificationHistory()}
+              disabled={loading}
+              className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50"
             >
               <History className="h-4 w-4 mr-2" />
-              {showHistory ? 'Hide History' : 'View History'}
+              {loading ? 'Refreshing...' : 'Refresh'}
             </button>
             <button
               type="button"
@@ -293,73 +271,70 @@ export default function CommunicationsPage() {
           </div>
         </div>
 
-      {/* Main Content */}
-      {showHistory ? (
-        <div className="bg-white shadow overflow-hidden sm:rounded-md">
-          <div className="px-4 py-5 sm:px-6">
-            <h3 className="text-lg leading-6 font-medium text-gray-900">Notification History</h3>
-            <p className="mt-1 max-w-2xl text-sm text-gray-500">
-              All notifications sent from this admin panel
-            </p>
-          </div>
-          {notifications.length > 0 ? (
-            <ul className="divide-y divide-gray-200">
-              {notifications.map((notification) => {
-                const IconComponent = getIconComponent(notification.icon);
-                return (
-                  <li key={notification.id} className="px-4 py-4 sm:px-6">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center">
-                        <div className="flex-shrink-0">
-                          <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center">
-                            <IconComponent className="h-5 w-5 text-green-600" />
-                          </div>
-                        </div>
-                        <div className="ml-4">
-                          <div className="flex items-center">
-                            <p className="text-sm font-medium text-gray-900">{notification.title}</p>
-                            <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                              {getRecipientLabel(notification.recipientType)}
-                            </span>
-                          </div>
-                          <p className="text-sm text-gray-500 mt-1">{notification.message}</p>
-                          <p className="text-xs text-gray-400 mt-1">
-                            Sent by {notification.sentBy} • {formatTimeAgo(notification.sentAt)}
-                          </p>
+       {/* Main Content - Show all notifications */}
+       <div className="bg-white shadow overflow-hidden sm:rounded-md">
+         <div className="px-4 py-5 sm:px-6">
+           <h3 className="text-lg leading-6 font-medium text-gray-900">
+             Notification History
+           </h3>
+           <p className="mt-1 max-w-2xl text-sm text-gray-500">
+             All notifications sent from this admin panel
+           </p>
+         </div>
+         {loading ? (
+           <div className="flex items-center justify-center py-12">
+             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
+             <span className="ml-2 text-gray-500">Loading notifications...</span>
+           </div>
+         ) : notifications.length > 0 ? (
+          <ul className="divide-y divide-gray-200">
+            {notifications.map((notification) => {
+              const IconComponent = getIconComponent(notification.icon);
+              return (
+                <li key={notification.id} className="px-4 py-4 sm:px-6">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center">
+                      <div className="flex-shrink-0">
+                        <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center">
+                          <IconComponent className="h-5 w-5 text-green-600" />
                         </div>
                       </div>
+                      <div className="ml-4">
+                        <div className="flex items-center">
+                          <p className="text-sm font-medium text-gray-900">{notification.title}</p>
+                          <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                            {getRecipientLabel(notification.recipientType)}
+                          </span>
+                        </div>
+                        <p className="text-sm text-gray-500 mt-1">{notification.message}</p>
+                        <p className="text-xs text-gray-400 mt-1">
+                          Sent by {notification.sentBy} • {formatTimeAgo(notification.sentAt)}
+                        </p>
+                      </div>
                     </div>
-                  </li>
-                );
-              })}
-            </ul>
-          ) : (
-            <div className="text-center py-12">
-              <Bell className="mx-auto h-12 w-12 text-gray-400" />
-              <h3 className="mt-2 text-sm font-medium text-gray-900">No notifications sent</h3>
-              <p className="mt-1 text-sm text-gray-500">Send your first notification to get started.</p>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        ) : (
+          <div className="text-center py-12">
+            <Bell className="mx-auto h-12 w-12 text-gray-400" />
+            <h3 className="mt-2 text-sm font-medium text-gray-900">No notifications sent</h3>
+            <p className="mt-1 text-sm text-gray-500">Send your first notification to get started.</p>
+            <div className="mt-6">
+              <button
+                type="button"
+                onClick={() => setShowForm(true)}
+                className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Send Notification
+              </button>
             </div>
-          )}
-        </div>
-      ) : (
-        <div className="text-center py-12">
-          <Bell className="mx-auto h-12 w-12 text-green-400" />
-          <h3 className="mt-2 text-sm font-medium text-gray-900">Communications Center</h3>
-          <p className="mt-1 text-sm text-gray-500">
-            Send notifications to users, doctors, or specific individuals
-          </p>
-          <div className="mt-6">
-            <button
-              type="button"
-              onClick={() => setShowForm(true)}
-              className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Send Notification
-            </button>
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Send Notification Modal */}
       {showForm && (
