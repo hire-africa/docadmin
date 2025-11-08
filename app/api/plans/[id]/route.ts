@@ -14,6 +14,13 @@ export async function PUT(
     }
 
     const { id } = params;
+    const planId = parseInt(id, 10);
+    if (isNaN(planId)) {
+      return NextResponse.json(
+        { message: 'Invalid plan ID' },
+        { status: 400 }
+      );
+    }
     const {
       name,
       description,
@@ -34,6 +41,23 @@ export async function PUT(
       );
     }
 
+    const priceNum = typeof price === 'string' ? parseFloat(price) : price;
+    if (typeof priceNum !== 'number' || isNaN(priceNum)) {
+      return NextResponse.json(
+        { message: 'Price must be a valid number' },
+        { status: 400 }
+      );
+    }
+
+    const allowedCurrencies = ['USD', 'MWK'];
+    const normalizedCurrency = (currency || 'USD').toUpperCase();
+    if (!allowedCurrencies.includes(normalizedCurrency)) {
+      return NextResponse.json(
+        { message: 'Currency must be USD or MWK' },
+        { status: 400 }
+      );
+    }
+
     const result = await query(`
       UPDATE plans 
       SET name = $1, description = $2, price = $3, currency = $4, duration = $5, 
@@ -43,15 +67,15 @@ export async function PUT(
     `, [
       name,
       description || null,
-      price,
-      currency || 'USD',
+      priceNum,
+      normalizedCurrency,
       duration || 30,
       text_sessions || 0,
       voice_calls || 0,
       video_calls || 0,
       features || [],
       status || 1,
-      id,
+      planId,
     ]);
 
     if (result.rows.length === 0) {
@@ -86,11 +110,18 @@ export async function DELETE(
     }
 
     const { id } = params;
+    const planId = parseInt(id, 10);
+    if (isNaN(planId)) {
+      return NextResponse.json(
+        { message: 'Invalid plan ID' },
+        { status: 400 }
+      );
+    }
 
     // Check if plan has active subscriptions
     const subscriptionsResult = await query(
       'SELECT COUNT(*) as count FROM subscriptions WHERE plan_id = $1 AND is_active = true',
-      [id]
+      [planId]
     );
 
     const activeSubscriptions = parseInt(subscriptionsResult.rows[0].count);
@@ -101,7 +132,7 @@ export async function DELETE(
       );
     }
 
-    const result = await query('DELETE FROM plans WHERE id = $1 RETURNING id', [id]);
+    const result = await query('DELETE FROM plans WHERE id = $1 RETURNING id', [planId]);
 
     if (result.rows.length === 0) {
       return NextResponse.json(

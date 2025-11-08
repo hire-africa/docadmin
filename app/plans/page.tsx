@@ -114,11 +114,15 @@ export default function PlansPage() {
 
   const handleEdit = (plan: Plan) => {
     setEditingPlan(plan);
+    const allowedCurrencies = ['USD', 'MWK'];
+    const normalizedCurrency = allowedCurrencies.includes(plan.currency?.toUpperCase?.() || '')
+      ? plan.currency.toUpperCase()
+      : 'USD';
     setFormData({
       name: plan.name,
       description: plan.description || '',
       price: plan.price,
-      currency: plan.currency,
+      currency: normalizedCurrency,
       duration: plan.duration,
       text_sessions: plan.text_sessions,
       voice_calls: plan.voice_calls,
@@ -180,7 +184,8 @@ export default function PlansPage() {
       if (isNaN(numericAmount)) {
         return `${currency || 'USD'} ${amount}`;
       }
-      return new Intl.NumberFormat('en-US', {
+      const locale = (currency || 'USD') === 'MWK' ? 'en-MW' : 'en-US';
+      return new Intl.NumberFormat(locale, {
         style: 'currency',
         currency: currency || 'USD',
       }).format(numericAmount);
@@ -357,8 +362,7 @@ export default function PlansPage() {
                         className="input w-full"
                       >
                         <option value="USD">USD</option>
-                        <option value="EUR">EUR</option>
-                        <option value="GBP">GBP</option>
+                        <option value="MWK">MWK</option>
                       </select>
                     </div>
                   </div>
