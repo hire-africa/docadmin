@@ -37,6 +37,8 @@ pids
 *.pid
 *.seed
 *.pid.lock
+.monitor_state.json
+scripts/.monitor_state.json
 
 # Coverage directory used by tools like istanbul
 coverage/

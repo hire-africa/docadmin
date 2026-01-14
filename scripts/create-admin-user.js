@@ -10,7 +10,7 @@ const pool = new Pool({
 
 async function createAdminUser() {
   const client = await pool.connect();
-  
+
   try {
     // Check if user already exists
     const existingUser = await client.query(
@@ -21,7 +21,7 @@ async function createAdminUser() {
     if (existingUser.rows.length > 0) {
       const user = existingUser.rows[0];
       console.log(`User with email blacksleeky84@gmail.com already exists with ID: ${user.id} and type: ${user.user_type}`);
-      
+
       if (user.user_type !== 'admin') {
         // Update existing user to admin
         await client.query(
@@ -66,11 +66,11 @@ async function createAdminUser() {
       console.log(`Email: ${user.email}`);
       console.log(`User Type: ${user.user_type}`);
       console.log(`Status: ${user.status}`);
-      console.log(`User ID: ${user.id}`);
-      console.log('\n📧 Admin Login Credentials:');
+      console.log('User ID:', user.id);
+      console.log('\n📧 Admin Login:');
       console.log('============================');
-      console.log('Email: blacksleeky84@gmail.com');
-      console.log('Password: PraiseAdmin2024!');
+      console.log('Email:', user.email);
+      console.log('Password: (Refer to your secure environment configuration)');
       console.log('\n⚠️  Note: This email can be used for both admin and regular user accounts.');
       console.log('The system will determine the appropriate access level based on the login context.');
     }

@@ -1,0 +1,13 @@
+# SPanel Deployment Configuration
+app:
+  name: docavailable-admin
+  type: nodejs
+  version: 20
+  root_dir: /
+  entry_point: server.js
+  port: 8080
+  build_command: npm run build
+  start_command: npm start
+  env:
+    NODE_ENV: production
+    PORT: 8080

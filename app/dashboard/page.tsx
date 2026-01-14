@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import Layout from '@/components/Layout';
-import { Users, CreditCard, Calendar, DollarSign, TrendingUp, Activity } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
+import { Users, CreditCard, Calendar, DollarSign, Activity, ArrowUpRight, ArrowDownRight, UserPlus, FileText, CheckCircle } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, AreaChart, Area } from 'recharts';
 
 interface DashboardStats {
   totalUsers: number;
@@ -28,6 +28,26 @@ interface ChartData {
   value: number;
 }
 
+interface ActivityItem {
+  type: 'user' | 'subscription' | 'appointment' | 'system';
+  title: string;
+  description: string;
+  time: string;
+}
+
+function formatRelativeTime(dateString: string) {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+  if (diffInSeconds < 60) return 'Just now';
+  if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
+  if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
+  if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)}d ago`;
+
+  return date.toLocaleDateString();
+}
+
 export default function Dashboard() {
   const [stats, setStats] = useState<DashboardStats>({
     totalUsers: 0,
@@ -50,6 +70,7 @@ export default function Dashboard() {
   const [userGrowthData, setUserGrowthData] = useState<ChartData[]>([]);
   const [revenueData, setRevenueData] = useState<ChartData[]>([]);
   const [subscriptionData, setSubscriptionData] = useState<ChartData[]>([]);
+  const [recentActivity, setRecentActivity] = useState<ActivityItem[]>([]);
 
   useEffect(() => {
     fetchDashboardData();
@@ -58,70 +79,23 @@ export default function Dashboard() {
   const fetchDashboardData = async () => {
     try {
       const token = localStorage.getItem('admin_token');
-      console.log('🔍 Fetching dashboard data...');
-      console.log('Token exists:', !!token);
-      
+
       const response = await fetch('/api/dashboard/stats', {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
       });
 
-      console.log('Response status:', response.status);
-      console.log('Response ok:', response.ok);
-
       if (response.ok) {
         const data = await response.json();
-        console.log('📊 Dashboard data received:', data);
-        console.log('📈 User Growth Data:', data.userGrowthData);
-        console.log('💰 Revenue Data:', data.revenueData);
-        console.log('📊 Subscription Data:', data.subscriptionData);
         setStats(data.stats);
         setUserGrowthData(data.userGrowthData || []);
         setRevenueData(data.revenueData || []);
         setSubscriptionData(data.subscriptionData || []);
-        
-        // If no data, show some sample data for demonstration
-        if (!data.userGrowthData || data.userGrowthData.length === 0) {
-          console.log('⚠️ No user growth data, using sample data');
-          setUserGrowthData([
-            { name: 'Week 1', value: 0 },
-            { name: 'Week 2', value: 0 },
-            { name: 'Week 3', value: 0 },
-            { name: 'Week 4', value: 0 },
-            { name: 'Week 5', value: 0 },
-            { name: 'Week 6', value: 0 }
-          ]);
-        }
-        
-        if (!data.revenueData || data.revenueData.length === 0) {
-          console.log('⚠️ No revenue data, using sample data');
-          setRevenueData([
-            { name: 'Week 1', value: 0 },
-            { name: 'Week 2', value: 0 },
-            { name: 'Week 3', value: 0 },
-            { name: 'Week 4', value: 0 },
-            { name: 'Week 5', value: 0 },
-            { name: 'Week 6', value: 0 }
-          ]);
-        }
-        
-        if (!data.subscriptionData || data.subscriptionData.length === 0) {
-          console.log('⚠️ No subscription data, using sample data');
-          setSubscriptionData([
-            { name: 'Basic Plan', value: 0 },
-            { name: 'Premium Plan', value: 0 },
-            { name: 'Pro Plan', value: 0 }
-          ]);
-        }
-      } else {
-        const errorData = await response.json();
-        console.error('❌ API Error:', errorData);
-        alert(`API Error: ${errorData.message || 'Unknown error'}`);
+        setRecentActivity(data.recentActivity || []);
       }
     } catch (error) {
-      console.error('❌ Error fetching dashboard data:', error);
-      alert(`Network Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.error('Error fetching dashboard data:', error);
     } finally {
       setLoading(false);
     }
@@ -132,39 +106,44 @@ export default function Dashboard() {
       name: 'Total Users',
       value: stats.totalUsers,
       icon: Users,
-      change: `${stats.userGrowthPercentage >= 0 ? '+' : ''}${stats.userGrowthPercentage}%`,
-      changeType: stats.userGrowthPercentage >= 0 ? 'positive' as const : 'negative' as const,
+      change: stats.userGrowthPercentage,
+      color: 'bg-blue-50 text-blue-600',
+      iconColor: 'text-blue-600'
     },
     {
       name: 'Active Subscriptions',
       value: stats.activeSubscriptions,
       icon: CreditCard,
-      change: `${stats.subscriptionGrowthPercentage >= 0 ? '+' : ''}${stats.subscriptionGrowthPercentage}%`,
-      changeType: stats.subscriptionGrowthPercentage >= 0 ? 'positive' as const : 'negative' as const,
+      change: stats.subscriptionGrowthPercentage,
+      color: 'bg-emerald-50 text-emerald-600',
+      iconColor: 'text-emerald-600'
     },
     {
       name: 'Total Revenue',
-      value: `MWK ${stats.totalRevenue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+      value: `MWK ${stats.totalRevenue.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`,
       icon: DollarSign,
-      change: `${stats.revenueGrowthPercentage >= 0 ? '+' : ''}${stats.revenueGrowthPercentage}%`,
-      changeType: stats.revenueGrowthPercentage >= 0 ? 'positive' as const : 'negative' as const,
+      change: stats.revenueGrowthPercentage,
+      color: 'bg-violet-50 text-violet-600',
+      iconColor: 'text-violet-600'
     },
     {
       name: 'Total Appointments',
       value: stats.totalAppointments,
       icon: Calendar,
-      change: `${stats.appointmentGrowthPercentage >= 0 ? '+' : ''}${stats.appointmentGrowthPercentage}%`,
-      changeType: stats.appointmentGrowthPercentage >= 0 ? 'positive' as const : 'negative' as const,
+      change: stats.appointmentGrowthPercentage,
+      color: 'bg-amber-50 text-amber-600',
+      iconColor: 'text-amber-600'
     },
   ];
 
-  const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444'];
+  // Modern colors for charts
+  const PIE_COLORS = ['#3b82f6', '#10b981', '#8b5cf6', '#f59e0b'];
 
   if (loading) {
     return (
       <Layout>
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-green-600"></div>
+        <div className="flex items-center justify-center h-[80vh]">
+          <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-emerald-500"></div>
         </div>
       </Layout>
     );
@@ -172,193 +151,235 @@ export default function Dashboard() {
 
   return (
     <Layout>
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-          <p className="mt-1 text-sm text-gray-500">
-            Overview of the Docavailable App
-          </p>
+      <div className="space-y-8 animate-fade-in">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
+          <div>
+            <h1 className="text-3xl font-bold text-slate-800 tracking-tight">Dashboard Overview</h1>
+            <p className="mt-2 text-slate-500">
+              Welcome back, here's what's happening with DocAvailable today.
+            </p>
+          </div>
         </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
           {statCards.map((card) => (
-            <div key={card.name} className="bg-white overflow-hidden shadow rounded-lg">
-              <div className="p-5">
-                <div className="flex items-center">
-                  <div className="flex-shrink-0">
-                    <card.icon className="h-6 w-6 text-gray-400" />
+            <div key={card.name} className="bg-white overflow-hidden shadow-sm rounded-xl border border-gray-100 hover:shadow-md transition-shadow duration-300">
+              <div className="p-6">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium text-slate-500 truncate">{card.name}</p>
+                    <p className="mt-2 text-2xl sm:text-3xl font-bold text-slate-800 break-words">{card.value}</p>
                   </div>
-                  <div className="ml-5 w-0 flex-1">
-                    <dl>
-                      <dt className="text-sm font-medium text-gray-500 truncate">
-                        {card.name}
-                      </dt>
-                      <dd className="text-lg font-medium text-gray-900">
-                        {card.value}
-                      </dd>
-                    </dl>
+                  <div className={`p-3 rounded-lg flex-shrink-0 ${card.color}`}>
+                    <card.icon className={`h-6 w-6 ${card.iconColor}`} />
                   </div>
                 </div>
-              </div>
-              <div className="bg-gray-50 px-5 py-3">
-                <div className="text-sm">
-                  <span className={`font-medium ${
-                    card.changeType === 'positive' ? 'text-green-600' : 'text-red-600'
-                  }`}>
-                    {card.change}
+                <div className="mt-4 flex items-center">
+                  {card.change >= 0 ? (
+                    <ArrowUpRight className="h-4 w-4 text-emerald-500 mr-1" />
+                  ) : (
+                    <ArrowDownRight className="h-4 w-4 text-red-500 mr-1" />
+                  )}
+                  <span className={`text-sm font-semibold ${card.change >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                    {Math.abs(card.change)}%
                   </span>
-                  <span className="text-gray-500"> from last month</span>
+                  <span className="ml-2 text-sm text-slate-400">from last month</span>
                 </div>
               </div>
             </div>
           ))}
         </div>
 
-        {/* Today's Stats */}
-        <div className="bg-white shadow rounded-lg p-6">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">Today's Activity</h3>
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <Calendar className="h-8 w-8 text-green-600" />
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-500">Appointments Today</p>
-                <p className="text-2xl font-semibold text-gray-900">{stats.todayAppointments}</p>
-              </div>
-            </div>
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <DollarSign className="h-8 w-8 text-green-600" />
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-500">Revenue Today</p>
-                <p className="text-2xl font-semibold text-gray-900">MWK {stats.todayRevenue.toLocaleString()}</p>
-              </div>
-            </div>
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <Activity className="h-8 w-8 text-green-600" />
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-500">Completion Rate</p>
-                <p className="text-2xl font-semibold text-gray-900">
-                  {stats.totalAppointments > 0 
-                    ? Math.round((stats.completedAppointments / stats.totalAppointments) * 100)
-                    : 0}%
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-
         {/* Charts Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* User Growth Chart */}
-          <div className="bg-white p-6 rounded-lg shadow">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">User Growth (Last 12 Weeks)</h3>
-            {userGrowthData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={userGrowthData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" />
-                  <YAxis />
-                  <Tooltip />
-                  <Line type="monotone" dataKey="value" stroke="#3b82f6" strokeWidth={2} />
-                </LineChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="flex items-center justify-center h-64 text-gray-500">
-                <div className="text-center">
-                  <Activity className="h-12 w-12 mx-auto mb-2 text-gray-300" />
-                  <p>No user growth data available</p>
-                </div>
-              </div>
-            )}
-          </div>
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 lg:col-span-2">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-lg font-bold text-slate-800">User Growth Trend</h3>
+              <span className="text-xs font-semibold px-2 py-1 bg-blue-50 text-blue-600 rounded-md">Last 12 Weeks</span>
+            </div>
 
-          {/* Revenue Chart */}
-          <div className="bg-white p-6 rounded-lg shadow">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Weekly Revenue (Last 12 Weeks)</h3>
-            {revenueData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={revenueData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis tickFormatter={(value) => value.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} />
-                <Tooltip formatter={(value) => [`MWK ${Number(value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 'Revenue']} />
-                <Bar dataKey="value" fill="#10b981" />
-              </BarChart>
-            </ResponsiveContainer>
+            {userGrowthData.length > 0 ? (
+              <div className="h-[350px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={userGrowthData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="colorUser" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.1} />
+                        <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                    <XAxis
+                      dataKey="name"
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fill: '#94a3b8', fontSize: 12 }}
+                      dy={10}
+                    />
+                    <YAxis
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fill: '#94a3b8', fontSize: 12 }}
+                    />
+                    <Tooltip
+                      contentStyle={{ backgroundColor: '#fff', borderRadius: '8px', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', border: 'none' }}
+                      itemStyle={{ color: '#334155' }}
+                      cursor={{ stroke: '#cbd5e1', strokeWidth: 1 }}
+                    />
+                    <Area type="monotone" dataKey="value" stroke="#3b82f6" strokeWidth={3} fillOpacity={1} fill="url(#colorUser)" />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
             ) : (
-              <div className="flex items-center justify-center h-64 text-gray-500">
+              <div className="flex items-center justify-center h-64 text-slate-400">
                 <div className="text-center">
-                  <DollarSign className="h-12 w-12 mx-auto mb-2 text-gray-300" />
-                  <p>No revenue data available</p>
+                  <Activity className="h-10 w-10 mx-auto mb-3 text-slate-300" />
+                  <p>No growth data available</p>
                 </div>
               </div>
             )}
           </div>
 
           {/* Subscription Distribution */}
-          <div className="bg-white p-6 rounded-lg shadow">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Subscription Distribution</h3>
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+            <h3 className="text-lg font-bold text-slate-800 mb-6">Subscription Distribution</h3>
             {subscriptionData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={subscriptionData}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="value"
-                  >
-                    {subscriptionData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
+              <div className="flex flex-col">
+                <div className="h-[260px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={subscriptionData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={60}
+                        outerRadius={90}
+                        paddingAngle={5}
+                        dataKey="value"
+                      >
+                        {subscriptionData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} strokeWidth={0} />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        contentStyle={{ backgroundColor: '#fff', borderRadius: '8px', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', border: 'none' }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+
+                {/* Custom Legend */}
+                <div className="mt-6 space-y-3">
+                  {subscriptionData.map((entry, index) => (
+                    <div key={index} className="flex justify-between items-center">
+                      <div className="flex items-center min-w-0">
+                        <span className="h-3 w-3 rounded-full flex-shrink-0 mr-2" style={{ backgroundColor: PIE_COLORS[index % PIE_COLORS.length] }}></span>
+                        <span className="text-sm text-slate-600 truncate">{entry.name}</span>
+                      </div>
+                      <span className="text-sm font-bold text-slate-800 ml-2">{entry.value}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
             ) : (
-              <div className="flex items-center justify-center h-64 text-gray-500">
+              <div className="flex items-center justify-center h-64 text-slate-400">
                 <div className="text-center">
-                  <CreditCard className="h-12 w-12 mx-auto mb-2 text-gray-300" />
-                  <p>No subscription data available</p>
+                  <CreditCard className="h-10 w-10 mx-auto mb-3 text-slate-300" />
+                  <p>No subscription data</p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Bottom Section: Revenue & Activity */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Revenue Bar Chart */}
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 lg:col-span-2">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-lg font-bold text-slate-800">Weekly Revenue</h3>
+              <div className="flex items-center space-x-2">
+                <span className="h-3 w-3 rounded-full bg-emerald-500"></span>
+                <span className="text-xs text-slate-500">Income</span>
+              </div>
+            </div>
+            {revenueData.length > 0 ? (
+              <div className="h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={revenueData} barSize={30}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                    <XAxis
+                      dataKey="name"
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fill: '#94a3b8', fontSize: 12 }}
+                      dy={10}
+                    />
+                    <YAxis
+                      tickFormatter={(value) => `${value}`}
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fill: '#94a3b8', fontSize: 12 }}
+                    />
+                    <Tooltip
+                      cursor={{ fill: '#f8fafc' }}
+                      contentStyle={{ backgroundColor: '#fff', borderRadius: '8px', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', border: 'none' }}
+                      formatter={(value) => [`MWK ${Number(value).toLocaleString('en-US')}`, 'Revenue']}
+                    />
+                    <Bar dataKey="value" fill="#10b981" radius={[6, 6, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <div className="flex items-center justify-center h-64 text-slate-400">
+                <div className="text-center">
+                  <DollarSign className="h-10 w-10 mx-auto mb-3 text-slate-300" />
+                  <p>No revenue data</p>
                 </div>
               </div>
             )}
           </div>
 
           {/* Recent Activity */}
-          <div className="bg-white p-6 rounded-lg shadow">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Recent Activity</h3>
-            <div className="space-y-4">
-              <div className="flex items-center">
-                <Activity className="h-5 w-5 text-green-500 mr-3" />
-                <div>
-                  <p className="text-sm font-medium text-gray-900">New doctor registered</p>
-                  <p className="text-sm text-gray-500">Dr. John Smith joined the platform</p>
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-lg font-bold text-slate-800">Recent Activity</h3>
+              <button className="text-sm text-emerald-600 hover:text-emerald-700 font-medium">View All</button>
+            </div>
+            <div className="space-y-6">
+              {recentActivity.length > 0 ? (
+                recentActivity.map((activity, index) => (
+                  <div key={index} className="flex relative">
+                    {index !== recentActivity.length - 1 && (
+                      <div className="absolute left-0 top-1 bottom-0 w-px bg-slate-100 ml-4 h-full"></div>
+                    )}
+                    <div className={`relative z-10 flex-shrink-0 h-8 w-8 rounded-full border-2 border-white flex items-center justify-center mr-4 ${activity.type === 'user' ? 'bg-emerald-100' :
+                      activity.type === 'subscription' ? 'bg-blue-100' :
+                        'bg-amber-100'
+                      }`}>
+                      {activity.type === 'user' ? (
+                        <UserPlus className="h-4 w-4 text-emerald-600" />
+                      ) : activity.type === 'subscription' ? (
+                        <CreditCard className="h-4 w-4 text-blue-600" />
+                      ) : (
+                        <Calendar className="h-4 w-4 text-amber-600" />
+                      )}
+                    </div>
+                    <div className="pb-2 min-w-0 flex-1">
+                      <p className="text-sm font-semibold text-slate-800 truncate">{activity.title}</p>
+                      <p className="text-xs text-slate-500 mt-0.5 break-words">{activity.description}</p>
+                      <p className="text-xs text-slate-400 mt-1">{formatRelativeTime(activity.time)}</p>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-8">
+                  <Activity className="h-10 w-10 mx-auto mb-3 text-slate-200" />
+                  <p className="text-slate-400 text-sm">No recent activity</p>
                 </div>
-              </div>
-              <div className="flex items-center">
-                <CreditCard className="h-5 w-5 text-blue-500 mr-3" />
-                <div>
-                  <p className="text-sm font-medium text-gray-900">Subscription activated</p>
-                  <p className="text-sm text-gray-500">Premium plan subscription for user #123</p>
-                </div>
-              </div>
-              <div className="flex items-center">
-                <Calendar className="h-5 w-5 text-purple-500 mr-3" />
-                <div>
-                  <p className="text-sm font-medium text-gray-900">Appointment scheduled</p>
-                  <p className="text-sm text-gray-500">New appointment for tomorrow at 2 PM</p>
-                </div>
-              </div>
+              )}
             </div>
           </div>
         </div>

@@ -6,7 +6,7 @@ const pool = new Pool({
   ssl: false
 });
 
-// Admin accounts from lib/auth.ts
+// Admin accounts to migrate
 const ADMIN_ACCOUNTS = [
   {
     email: 'blacksleeky84@gmail.com',
@@ -27,13 +27,13 @@ const ADMIN_ACCOUNTS = [
 
 async function migrateAdminsToDatabase() {
   const client = await pool.connect();
-  
+
   try {
     console.log('🔄 Migrating admin accounts to database...');
-    
+
     for (const admin of ADMIN_ACCOUNTS) {
       console.log(`\n📝 Processing: ${admin.name} (${admin.email})`);
-      
+
       // Check if user already exists
       const existingUser = await client.query(
         'SELECT id, user_type FROM users WHERE email = $1',
@@ -43,7 +43,7 @@ async function migrateAdminsToDatabase() {
       if (existingUser.rows.length > 0) {
         const user = existingUser.rows[0];
         console.log(`   User exists with ID: ${user.id}, type: ${user.user_type}`);
-        
+
         if (user.user_type !== 'admin') {
           // Update existing user to admin
           await client.query(

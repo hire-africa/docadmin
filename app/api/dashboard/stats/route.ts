@@ -7,12 +7,12 @@ export async function GET(request: NextRequest) {
     const token = request.headers.get('authorization')?.replace('Bearer ', '');
     console.log('🔍 Dashboard API called');
     console.log('Token provided:', !!token);
-    
+
     if (!token) {
       console.log('❌ No token provided');
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
-    
+
     const verifiedUser = verifyToken(token);
     if (!verifiedUser) {
       console.log('❌ Token verification failed');
@@ -46,32 +46,30 @@ export async function GET(request: NextRequest) {
     const activeSubscriptions = parseInt(subscriptionsResult.rows[0].count);
     console.log('Active subscriptions:', activeSubscriptions);
 
-    // Get total revenue (convert USD to MWK at rate 1800:1) - use plans table prices
+    // Get total revenue (sum of all completed payment transactions)
     const revenueResult = await query(`
       SELECT COALESCE(SUM(
         CASE 
-          WHEN p.currency = 'USD' THEN CAST(p.price AS DECIMAL) * 1800
-          ELSE CAST(p.price AS DECIMAL)
+          WHEN currency = 'USD' THEN CAST(amount AS DECIMAL) * 1800
+          ELSE CAST(amount AS DECIMAL)
         END
       ), 0) as total_revenue 
-      FROM subscriptions s
-      JOIN plans p ON s.plan_id = p.id
-      WHERE s.is_active = true
+      FROM payment_transactions
+      WHERE (status = 'completed' OR status = 'paid' OR status = 'success')
     `);
     const totalRevenue = parseFloat(revenueResult.rows[0].total_revenue);
 
-    // Get monthly revenue (current month) - convert USD to MWK at rate 1800:1 - use plans table prices
+    // Get monthly revenue (current month)
     const monthlyRevenueResult = await query(`
       SELECT COALESCE(SUM(
         CASE 
-          WHEN p.currency = 'USD' THEN CAST(p.price AS DECIMAL) * 1800
-          ELSE CAST(p.price AS DECIMAL)
+          WHEN currency = 'USD' THEN CAST(amount AS DECIMAL) * 1800
+          ELSE CAST(amount AS DECIMAL)
         END
       ), 0) as monthly_revenue 
-      FROM subscriptions s
-      JOIN plans p ON s.plan_id = p.id
-      WHERE s.is_active = true 
-      AND s.created_at >= DATE_TRUNC('month', CURRENT_DATE)
+      FROM payment_transactions
+      WHERE (status = 'completed' OR status = 'paid' OR status = 'success')
+      AND created_at >= DATE_TRUNC('month', CURRENT_DATE)
     `);
     const monthlyRevenue = parseFloat(monthlyRevenueResult.rows[0].monthly_revenue);
 
@@ -98,21 +96,21 @@ export async function GET(request: NextRequest) {
       value: parseInt(row.count)
     }));
 
-    // Get revenue data (last 12 weeks) - convert USD to MWK at rate 1800:1 - use plans table prices
+    // Get revenue data (last 12 weeks) - from completed payments
     const revenueDataResult = await query(`
       SELECT 
-        TO_CHAR(s.created_at, 'Mon DD') as week,
+        TO_CHAR(created_at, 'Mon DD') as week,
         COALESCE(SUM(
           CASE 
-            WHEN p.currency = 'USD' THEN CAST(p.price AS DECIMAL) * 1800
-            ELSE CAST(p.price AS DECIMAL)
+            WHEN currency = 'USD' THEN CAST(amount AS DECIMAL) * 1800
+            ELSE CAST(amount AS DECIMAL)
           END
         ), 0) as revenue
-      FROM subscriptions s
-      JOIN plans p ON s.plan_id = p.id
-      WHERE s.created_at >= CURRENT_DATE - INTERVAL '12 weeks'
-      GROUP BY TO_CHAR(s.created_at, 'Mon DD')
-      ORDER BY MIN(s.created_at)
+      FROM payment_transactions
+      WHERE (status = 'completed' OR status = 'paid' OR status = 'success')
+      AND created_at >= CURRENT_DATE - INTERVAL '12 weeks'
+      GROUP BY TO_CHAR(created_at, 'Mon DD')
+      ORDER BY MIN(created_at)
     `);
     const revenueData = revenueDataResult.rows.map(row => ({
       name: row.week,
@@ -146,25 +144,24 @@ export async function GET(request: NextRequest) {
       AND created_at < DATE_TRUNC('month', CURRENT_DATE)
     `);
     const previousMonthUsers = parseInt(previousMonthUsersResult.rows[0].count);
-    const userGrowthPercentage = previousMonthUsers > 0 
+    const userGrowthPercentage = previousMonthUsers > 0
       ? Math.round(((totalUsers - previousMonthUsers) / previousMonthUsers) * 100)
       : 0;
 
     const previousMonthRevenueResult = await query(`
       SELECT COALESCE(SUM(
         CASE 
-          WHEN p.currency = 'USD' THEN CAST(p.price AS DECIMAL) * 1800
-          ELSE CAST(p.price AS DECIMAL)
+          WHEN currency = 'USD' THEN CAST(amount AS DECIMAL) * 1800
+          ELSE CAST(amount AS DECIMAL)
         END
       ), 0) as revenue 
-      FROM subscriptions s
-      JOIN plans p ON s.plan_id = p.id
-      WHERE s.is_active = true 
-      AND s.created_at >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '1 month')
-      AND s.created_at < DATE_TRUNC('month', CURRENT_DATE)
+      FROM payment_transactions
+      WHERE (status = 'completed' OR status = 'paid' OR status = 'success')
+      AND created_at >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '1 month')
+      AND created_at < DATE_TRUNC('month', CURRENT_DATE)
     `);
     const previousMonthRevenue = parseFloat(previousMonthRevenueResult.rows[0].revenue);
-    const revenueGrowthPercentage = previousMonthRevenue > 0 
+    const revenueGrowthPercentage = previousMonthRevenue > 0
       ? Math.round(((monthlyRevenue - previousMonthRevenue) / previousMonthRevenue) * 100)
       : 0;
 
@@ -175,7 +172,7 @@ export async function GET(request: NextRequest) {
       AND created_at < DATE_TRUNC('month', CURRENT_DATE)
     `);
     const previousMonthAppointments = parseInt(previousMonthAppointmentsResult.rows[0].count);
-    const appointmentGrowthPercentage = previousMonthAppointments > 0 
+    const appointmentGrowthPercentage = previousMonthAppointments > 0
       ? Math.round(((totalAppointments - previousMonthAppointments) / previousMonthAppointments) * 100)
       : 0;
 
@@ -187,11 +184,11 @@ export async function GET(request: NextRequest) {
       AND created_at < DATE_TRUNC('month', CURRENT_DATE)
     `);
     const previousMonthSubscriptions = parseInt(previousMonthSubscriptionsResult.rows[0].count);
-    const subscriptionGrowthPercentage = previousMonthSubscriptions > 0 
+    const subscriptionGrowthPercentage = previousMonthSubscriptions > 0
       ? Math.round(((activeSubscriptions - previousMonthSubscriptions) / previousMonthSubscriptions) * 100)
       : 0;
 
-    // Get additional real-time stats (status = 1 typically means completed)
+    // Get additional real-time stats
     const completedAppointmentsResult = await query('SELECT COUNT(*) as count FROM appointments WHERE status = $1', [1]);
     const completedAppointments = parseInt(completedAppointmentsResult.rows[0].count);
 
@@ -205,16 +202,33 @@ export async function GET(request: NextRequest) {
     const todayRevenueResult = await query(`
       SELECT COALESCE(SUM(
         CASE 
-          WHEN p.currency = 'USD' THEN CAST(p.price AS DECIMAL) * 1800
-          ELSE CAST(p.price AS DECIMAL)
+          WHEN currency = 'USD' THEN CAST(amount AS DECIMAL) * 1800
+          ELSE CAST(amount AS DECIMAL)
         END
       ), 0) as revenue 
-      FROM subscriptions s
-      JOIN plans p ON s.plan_id = p.id
-      WHERE s.is_active = true 
-      AND DATE(s.created_at) = CURRENT_DATE
+      FROM payment_transactions
+      WHERE (status = 'completed' OR status = 'paid' OR status = 'success')
+      AND DATE(created_at) = CURRENT_DATE
     `);
     const todayRevenue = parseFloat(todayRevenueResult.rows[0].revenue);
+
+    // Get recent activity
+    const recentActivityQuery = `
+      (SELECT 'user' as type, first_name || ' ' || last_name as title, 'New user joined' as description, created_at FROM users)
+      UNION ALL
+      (SELECT 'subscription' as type, plan_name as title, 'New subscription purchase' as description, created_at FROM subscriptions)
+      UNION ALL
+      (SELECT 'appointment' as type, 'Medical Appointment' as title, 'New appointment scheduled' as description, created_at FROM appointments)
+      ORDER BY created_at DESC
+      LIMIT 10
+    `;
+    const recentActivityResult = await query(recentActivityQuery);
+    const recentActivity = recentActivityResult.rows.map(row => ({
+      type: row.type,
+      title: row.title,
+      description: row.description,
+      time: row.created_at,
+    }));
 
     const stats = {
       totalUsers,
@@ -239,6 +253,7 @@ export async function GET(request: NextRequest) {
       userGrowthData,
       revenueData,
       subscriptionData,
+      recentActivity,
     });
   } catch (error) {
     console.error('Dashboard stats error:', error);

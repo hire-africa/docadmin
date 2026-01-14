@@ -1,12 +1,41 @@
 import { Pool } from 'pg';
 
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
+console.log('🔌 Initializing Database Pool...');
+const connectionString = process.env.DATABASE_URL;
+
+// Build configuration from individual variables or fallback to connection string
+const dbConfig: any = {
   ssl: {
     rejectUnauthorized: false,
     checkServerIdentity: () => undefined
+  },
+  connectionTimeoutMillis: 10000,
+  idleTimeoutMillis: 30000,
+  max: 20
+};
+
+if (process.env.DB_HOST) {
+  console.log('🔗 Using individual database variables');
+  dbConfig.host = process.env.DB_HOST;
+  dbConfig.port = parseInt(process.env.DB_PORT || '5432', 10);
+  dbConfig.user = process.env.DB_USER;
+  dbConfig.password = process.env.DB_PASSWORD;
+  dbConfig.database = process.env.DB_NAME;
+
+  if (dbConfig.host.includes('.i.db.ondigitalocean.com')) {
+    console.warn('⚠️  WARNING: Using INTERNAL database host (.i.). This will only work from within DigitalOcean VPC.');
   }
-});
+} else if (connectionString) {
+  console.log('🔗 Using DATABASE_URL connection string');
+  dbConfig.connectionString = connectionString;
+  if (connectionString.includes('.i.db.ondigitalocean.com')) {
+    console.warn('⚠️  WARNING: Using INTERNAL database host (.i.). This will only work from within DigitalOcean VPC.');
+  }
+} else {
+  console.error('❌ No database configuration found (DB_HOST or DATABASE_URL)');
+}
+
+const pool = new Pool(dbConfig);
 
 export default pool;
 

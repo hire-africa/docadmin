@@ -5,7 +5,7 @@ import { query } from '@/lib/database';
 export async function GET(request: NextRequest) {
   try {
     const token = request.headers.get('authorization')?.replace('Bearer ', '');
-    
+
     if (!token || !verifyToken(token)) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (status !== 'all') {
-      whereConditions.push(`pt.payment_status = '${status}'`);
+      whereConditions.push(`pt.status = '${status}'`);
     }
 
     if (gateway !== 'all') {

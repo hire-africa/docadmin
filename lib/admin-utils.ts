@@ -28,25 +28,6 @@ export async function checkEmailExists(email: string): Promise<{
   }
 }
 
-// Get admin account info
-export function getAdminAccountInfo(email: string) {
-  const adminAccounts = [
-    {
-      email: 'blacksleeky84@gmail.com',
-      password: 'PraiseAdmin2024!',
-      name: 'Praise Mtosa',
-      role: 'admin'
-    },
-    {
-      email: 'admin@docavailable.com',
-      password: 'admin123',
-      name: 'System Admin',
-      role: 'admin'
-    }
-  ];
-
-  return adminAccounts.find(acc => acc.email === email);
-}
 
 // Check if email can be used for admin (either not in DB or already admin)
 export async function canUseEmailForAdmin(email: string): Promise<{
@@ -55,7 +36,7 @@ export async function canUseEmailForAdmin(email: string): Promise<{
   existingUserType?: string;
 }> {
   // Check if it's a valid admin email
-  if (!isAdminEmail(email)) {
+  if (!(await isAdminEmail(email))) {
     return {
       canUse: false,
       reason: 'Email is not configured as an admin account'
@@ -64,7 +45,7 @@ export async function canUseEmailForAdmin(email: string): Promise<{
 
   // Check if email exists in database
   const emailCheck = await checkEmailExists(email);
-  
+
   if (!emailCheck.exists) {
     return { canUse: true };
   }

@@ -1,19 +1,43 @@
 const { Pool } = require('pg');
+const bcrypt = require('bcryptjs');
+
+const fs = require('fs');
+const path = require('path');
+
+// Manually load .env
+try {
+  const envPath = path.resolve(__dirname, '..', '.env');
+  if (fs.existsSync(envPath)) {
+    console.log('📄 Loading .env file...');
+    const envConfig = fs.readFileSync(envPath, 'utf8');
+    envConfig.split('\n').forEach(line => {
+      const match = line.match(/^([^=]+)=(.*)$/);
+      if (match) {
+        const key = match[1].trim();
+        const value = match[2].trim().replace(/^["'](.*)["']$/, '$1');
+        process.env[key] = value;
+      }
+    });
+  }
+} catch (e) {
+  console.error('Error loading .env:', e);
+}
 
 // Database connection
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: {
-    rejectUnauthorized: false
+    rejectUnauthorized: false,
+    checkServerIdentity: () => undefined
   }
 });
 
 async function createAdminsTable() {
   const client = await pool.connect();
-  
+
   try {
     console.log('Creating admins table...');
-    
+
     // Create admins table
     await client.query(`
       CREATE TABLE IF NOT EXISTS admins (
@@ -30,30 +54,32 @@ async function createAdminsTable() {
 
     console.log('✅ Admins table created successfully');
 
-    // Insert admin accounts
+    // Seed admin accounts - passwords should be provided via environment variables in production
+    const INITIAL_ADMIN_PASSWORD = process.env.INITIAL_ADMIN_PASSWORD || 'ChangeMe123!';
+
     const adminAccounts = [
       {
         email: 'blacksleeky84@gmail.com',
-        password: 'PraiseAdmin2024!',
+        password: process.env.ADMIN_PASSWORD_1 || INITIAL_ADMIN_PASSWORD,
         name: 'Praise Mtosa',
         role: 'admin'
       },
       {
         email: 'admin@docavailable.com',
-        password: 'admin123',
+        password: process.env.ADMIN_PASSWORD_2 || INITIAL_ADMIN_PASSWORD,
         name: 'System Admin',
         role: 'admin'
       },
       {
         email: 'macnyoni4@gmail.com',
-        password: 'MacAdmin2025!',
+        password: process.env.ADMIN_PASSWORD_3 || INITIAL_ADMIN_PASSWORD,
         name: 'Mac Nyoni',
         role: 'admin'
       }
     ];
 
     console.log('Inserting admin accounts...');
-    
+
     for (const admin of adminAccounts) {
       // Check if admin already exists
       const existingAdmin = await client.query(
@@ -62,11 +88,12 @@ async function createAdminsTable() {
       );
 
       if (existingAdmin.rows.length === 0) {
+        const hashedPassword = await bcrypt.hash(admin.password, 10);
         await client.query(`
           INSERT INTO admins (email, password, name, role, is_active)
           VALUES ($1, $2, $3, $4, $5)
-        `, [admin.email, admin.password, admin.name, admin.role, true]);
-        
+        `, [admin.email, hashedPassword, admin.name, admin.role, true]);
+
         console.log(`✅ Created admin: ${admin.name} (${admin.email})`);
       } else {
         console.log(`⚠️  Admin already exists: ${admin.name} (${admin.email})`);

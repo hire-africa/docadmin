@@ -84,11 +84,46 @@ If deploying with Docker:
    docker run -p 3000:3000 --env-file .env docavailable-admin
    ```
 
-### Admin Account Setup
+## SPanel / VPS Deployment (Recommended)
 
+For deployment on SPanel or a standard VPS, we recommend using **PM2** to manage your processes.
+
+### 1. Preparations
+- Ensure Node.js (v18+) is installed on your server via SPanel's Node.js Selector.
+- Upload the codebase to your server.
+
+### 2. Configure Environment
+Create a `.env` file in the root directory with your production credentials:
+```bash
+DATABASE_URL=your_db_connection_string
+JWT_SECRET=your_secret
+MAIL_PASSWORD=...
+# ... other variables
+```
+
+### 3. Build and Start
+Run the following commands in the terminal:
+```bash
+# Install dependencies
+npm install
+
+# Build the Next.js production bundle
+npm run build
+
+# Start the application and the signup monitor using PM2
+npm install -g pm2
+pm2 start ecosystem.config.js
+```
+
+### 4. SPanel Node.js Selector
+- In SPanel, point your domain to the folder containing this app.
+- Set the Application Startup File to `server.js`.
+- Set the Application Entry point to `server.js`.
+
+---
+
+### Admin Account Setup
 After deployment, you can create an admin account by running:
 ```bash
 npm run create-admin
 ```
-
-Or use the environment variables ADMIN_EMAIL and ADMIN_PASSWORD to set up the initial admin account.

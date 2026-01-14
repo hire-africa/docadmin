@@ -8,7 +8,7 @@ export async function PATCH(
 ) {
   try {
     const token = request.headers.get('authorization')?.replace('Bearer ', '');
-    
+
     if (!token || !verifyToken(token)) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
@@ -32,7 +32,7 @@ export async function PATCH(
     }
 
     const result = await query(
-      'UPDATE payment_transactions SET payment_status = $1, updated_at = NOW() WHERE id = $2 RETURNING id, payment_status, transaction_id',
+      'UPDATE payment_transactions SET status = $1, updated_at = NOW() WHERE id = $2 RETURNING id, status, transaction_id',
       [status, id]
     );
 
