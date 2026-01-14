@@ -1,6 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  //  output: 'standalone', // Required for Docker deployment, but can conflict with custom server.js on VPS
+  output: 'standalone', // Required for Docker deployment, but can conflict with custom server.js on VPS
   env: {
     DATABASE_URL: process.env.DATABASE_URL,
     JWT_SECRET: process.env.JWT_SECRET,
