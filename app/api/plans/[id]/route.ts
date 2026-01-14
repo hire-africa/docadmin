@@ -8,7 +8,7 @@ export async function PUT(
 ) {
   try {
     const token = request.headers.get('authorization')?.replace('Bearer ', '');
-    
+
     if (!token || !verifyToken(token)) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
@@ -58,41 +58,58 @@ export async function PUT(
       );
     }
 
-    const result = await query(`
-      UPDATE plans 
-      SET name = $1, description = $2, price = $3, currency = $4, duration = $5, 
-          text_sessions = $6, voice_calls = $7, video_calls = $8, features = $9, status = $10
-      WHERE id = $11
-      RETURNING *
-    `, [
-      name,
-      description || null,
-      priceNum,
-      normalizedCurrency,
-      duration || 30,
-      text_sessions || 0,
-      voice_calls || 0,
-      video_calls || 0,
-      features || [],
-      status || 1,
-      planId,
-    ]);
+    // Ensure status is an integer
+    const statusInt = parseInt(status?.toString() || '1', 10);
 
-    if (result.rows.length === 0) {
+    // Ensure features is a JSON string if the DB expects JSON, or keep as array if driver handles it. 
+    // Best practice for pg with jsonb: pass the object/array directly, but if it fails, stringifying helps debugging.
+    // We'll try passing it directly but ensure it's an array.
+    const featuresArray = Array.isArray(features) ? features : [];
+
+    try {
+      const result = await query(`
+        UPDATE plans 
+        SET name = $1, description = $2, price = $3, currency = $4, duration = $5, 
+            text_sessions = $6, voice_calls = $7, video_calls = $8, features = $9, status = $10
+        WHERE id = $11
+        RETURNING *
+      `, [
+        name,
+        description || null,
+        priceNum,
+        normalizedCurrency,
+        duration || 30,
+        text_sessions || 0,
+        voice_calls || 0,
+        video_calls || 0,
+        JSON.stringify(featuresArray), // Explicitly stringify to ensure JSON column compatibility
+        statusInt,
+        planId,
+      ]);
+
+      if (result.rows.length === 0) {
+        return NextResponse.json(
+          { message: 'Plan not found' },
+          { status: 404 }
+        );
+      }
+
+      return NextResponse.json({
+        message: 'Plan updated successfully',
+        plan: result.rows[0],
+      });
+    } catch (dbError: any) {
+      console.error('Database error during plan update:', dbError);
       return NextResponse.json(
-        { message: 'Plan not found' },
-        { status: 404 }
+        { message: `Database error: ${dbError.message}` },
+        { status: 500 }
       );
     }
 
-    return NextResponse.json({
-      message: 'Plan updated successfully',
-      plan: result.rows[0],
-    });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Plan update error:', error);
     return NextResponse.json(
-      { message: 'Internal server error' },
+      { message: `Internal server error: ${error.message}` },
       { status: 500 }
     );
   }
@@ -104,7 +121,7 @@ export async function DELETE(
 ) {
   try {
     const token = request.headers.get('authorization')?.replace('Bearer ', '');
-    
+
     if (!token || !verifyToken(token)) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }

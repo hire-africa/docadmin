@@ -5,7 +5,7 @@ import { query } from '@/lib/database';
 export async function GET(request: NextRequest) {
   try {
     const token = request.headers.get('authorization')?.replace('Bearer ', '');
-    
+
     if (!token || !verifyToken(token)) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
@@ -16,112 +16,171 @@ export async function GET(request: NextRequest) {
     // Calculate date range
     let monthsBack = 6;
     switch (range) {
-      case '1month':
-        monthsBack = 1;
-        break;
-      case '3months':
-        monthsBack = 3;
-        break;
-      case '6months':
-        monthsBack = 6;
-        break;
-      case '1year':
-        monthsBack = 12;
-        break;
+      case '1month': monthsBack = 1; break;
+      case '3months': monthsBack = 3; break;
+      case '6months': monthsBack = 6; break;
+      case '1year': monthsBack = 12; break;
     }
 
-    // Get user growth data
-    const userGrowthResult = await query(`
-      SELECT 
-        TO_CHAR(created_at, 'Mon YYYY') as month,
-        COUNT(*) as total_users,
-        COUNT(CASE WHEN user_type = 'doctor' THEN 1 END) as doctors,
-        COUNT(CASE WHEN user_type = 'patient' THEN 1 END) as patients
-      FROM users 
-      WHERE created_at >= CURRENT_DATE - INTERVAL '${monthsBack} months'
-      GROUP BY TO_CHAR(created_at, 'Mon YYYY')
-      ORDER BY MIN(created_at)
-    `);
-
-    const userGrowth = userGrowthResult.rows.map(row => ({
-      month: row.month,
-      users: parseInt(row.total_users),
-      doctors: parseInt(row.doctors),
-      patients: parseInt(row.patients),
-    }));
-
-    // Get revenue data
-    const revenueResult = await query(`
-      SELECT 
-        TO_CHAR(created_at, 'Mon YYYY') as month,
-        COALESCE(SUM(CAST(plan_price AS DECIMAL)), 0) as revenue,
-        COUNT(*) as subscriptions
-      FROM subscriptions 
-      WHERE created_at >= CURRENT_DATE - INTERVAL '${monthsBack} months'
-      AND is_active = true
-      GROUP BY TO_CHAR(created_at, 'Mon YYYY')
-      ORDER BY MIN(created_at)
-    `);
-
-    const revenueData = revenueResult.rows.map(row => ({
-      month: row.month,
-      revenue: parseFloat(row.revenue),
-      subscriptions: parseInt(row.subscriptions),
-    }));
-
-    // Get appointment stats
-    const appointmentStatsResult = await query(`
-      SELECT 
-        appointment_type as type,
-        COUNT(*) as count
-      FROM appointments 
-      WHERE created_at >= CURRENT_DATE - INTERVAL '${monthsBack} months'
-      GROUP BY appointment_type
-      ORDER BY count DESC
-    `);
-
-    const appointmentStats = appointmentStatsResult.rows.map(row => ({
-      type: row.type,
-      count: parseInt(row.count),
-    }));
-
-    // Get payment methods data
-    const paymentMethodsResult = await query(`
-      SELECT 
-        payment_method as method,
-        COUNT(*) as count,
-        COALESCE(SUM(CAST(amount AS DECIMAL)), 0) as amount
-      FROM payment_transactions 
-      WHERE created_at >= CURRENT_DATE - INTERVAL '${monthsBack} months'
-      GROUP BY payment_method
-      ORDER BY count DESC
-    `);
-
-    const paymentMethods = paymentMethodsResult.rows.map(row => ({
-      method: row.method,
-      count: parseInt(row.count),
-      amount: parseFloat(row.amount),
-    }));
-
-    // Get monthly stats
-    const monthlyStatsResult = await query(`
-      SELECT 
-        (SELECT COUNT(*) FROM users) as total_users,
-        (SELECT COUNT(*) FROM users WHERE created_at >= DATE_TRUNC('month', CURRENT_DATE)) as new_users,
-        (SELECT COALESCE(SUM(CAST(plan_price AS DECIMAL)), 0) FROM subscriptions WHERE is_active = true) as total_revenue,
-        (SELECT COALESCE(SUM(CAST(plan_price AS DECIMAL)), 0) FROM subscriptions WHERE is_active = true AND created_at >= DATE_TRUNC('month', CURRENT_DATE)) as monthly_revenue,
-        (SELECT COUNT(*) FROM appointments) as total_appointments,
-        (SELECT COUNT(*) FROM appointments WHERE status = 'completed') as completed_appointments
-    `);
-
-    const monthlyStats = {
-      totalUsers: parseInt(monthlyStatsResult.rows[0].total_users),
-      newUsers: parseInt(monthlyStatsResult.rows[0].new_users),
-      totalRevenue: parseFloat(monthlyStatsResult.rows[0].total_revenue),
-      monthlyRevenue: parseFloat(monthlyStatsResult.rows[0].monthly_revenue),
-      totalAppointments: parseInt(monthlyStatsResult.rows[0].total_appointments),
-      completedAppointments: parseInt(monthlyStatsResult.rows[0].completed_appointments),
+    // Initialize result objects (fallback to empty/zeros)
+    let userGrowth: any[] = [];
+    let revenueData: any[] = [];
+    let appointmentStats: any[] = [];
+    let paymentMethods: any[] = [];
+    let monthlyStats = {
+      totalUsers: 0,
+      newUsers: 0,
+      totalRevenue: 0,
+      monthlyRevenue: 0,
+      totalAppointments: 0,
+      completedAppointments: 0
     };
+
+    // 1. User Growth
+    try {
+      const userGrowthResult = await query(`
+        SELECT 
+          TO_CHAR(created_at, 'Mon YYYY') as month,
+          COUNT(*) as total_users,
+          COUNT(CASE WHEN user_type = 'doctor' THEN 1 END) as doctors,
+          COUNT(CASE WHEN user_type = 'patient' THEN 1 END) as patients
+        FROM users 
+        WHERE created_at >= CURRENT_DATE - INTERVAL '${monthsBack} months'
+        GROUP BY TO_CHAR(created_at, 'Mon YYYY'), EXTRACT(YEAR FROM created_at), EXTRACT(MONTH FROM created_at)
+        ORDER BY EXTRACT(YEAR FROM created_at), EXTRACT(MONTH FROM created_at)
+      `);
+
+      userGrowth = userGrowthResult.rows.map(row => ({
+        month: row.month,
+        users: parseInt(row.total_users),
+        doctors: parseInt(row.doctors),
+        patients: parseInt(row.patients),
+      }));
+    } catch (e) {
+      console.error('Error fetching user growth:', e);
+    }
+
+    // 2. Revenue Data
+    try {
+      // Try to determine if plan_price needs casting or if it exists
+      // We'll use a safer query that handles potential type mismatch
+      const revenueResult = await query(`
+        SELECT 
+          TO_CHAR(created_at, 'Mon YYYY') as month,
+          COALESCE(SUM(plan_price), 0) as revenue,
+          COUNT(*) as subscriptions
+        FROM subscriptions 
+        WHERE created_at >= CURRENT_DATE - INTERVAL '${monthsBack} months'
+        AND is_active = true
+        GROUP BY TO_CHAR(created_at, 'Mon YYYY'), EXTRACT(YEAR FROM created_at), EXTRACT(MONTH FROM created_at)
+        ORDER BY EXTRACT(YEAR FROM created_at), EXTRACT(MONTH FROM created_at)
+      `);
+
+      revenueData = revenueResult.rows.map(row => ({
+        month: row.month,
+        revenue: parseFloat(row.revenue),
+        subscriptions: parseInt(row.subscriptions),
+      }));
+    } catch (e) {
+      console.error('Error fetching revenue data (attempt 1):', e);
+      // Fallback: try casting if direct sum failed
+      try {
+        const revenueResultFallback = await query(`
+          SELECT 
+            TO_CHAR(created_at, 'Mon YYYY') as month,
+            COALESCE(SUM(CAST(plan_price AS NUMERIC)), 0) as revenue,
+            COUNT(*) as subscriptions
+          FROM subscriptions 
+          WHERE created_at >= CURRENT_DATE - INTERVAL '${monthsBack} months'
+          AND is_active = true
+          GROUP BY TO_CHAR(created_at, 'Mon YYYY'), EXTRACT(YEAR FROM created_at), EXTRACT(MONTH FROM created_at)
+          ORDER BY EXTRACT(YEAR FROM created_at), EXTRACT(MONTH FROM created_at)
+        `);
+        revenueData = revenueResultFallback.rows.map(row => ({
+          month: row.month,
+          revenue: parseFloat(row.revenue),
+          subscriptions: parseInt(row.subscriptions),
+        }));
+      } catch (e2) {
+        console.error('Error fetching revenue data (attempt 2):', e2);
+      }
+    }
+
+    // 3. Appointment Stats
+    try {
+      const appointmentStatsResult = await query(`
+        SELECT 
+          COALESCE(appointment_type, 'Unknown') as type,
+          COUNT(*) as count
+        FROM appointments 
+        WHERE created_at >= CURRENT_DATE - INTERVAL '${monthsBack} months'
+        GROUP BY appointment_type
+        ORDER BY count DESC
+      `);
+
+      appointmentStats = appointmentStatsResult.rows.map(row => ({
+        type: row.type,
+        count: parseInt(row.count),
+      }));
+    } catch (e) {
+      console.error('Error fetching appointment stats:', e);
+    }
+
+    // 4. Payment Methods
+    try {
+      const paymentMethodsResult = await query(`
+        SELECT 
+          COALESCE(payment_method, 'Unknown') as method,
+          COUNT(*) as count,
+          COALESCE(SUM(amount), 0) as amount
+        FROM payment_transactions 
+        WHERE created_at >= CURRENT_DATE - INTERVAL '${monthsBack} months'
+        GROUP BY payment_method
+        ORDER BY count DESC
+      `);
+
+      paymentMethods = paymentMethodsResult.rows.map(row => ({
+        method: row.method,
+        count: parseInt(row.count),
+        amount: parseFloat(row.amount),
+      }));
+    } catch (e) {
+      console.error('Error fetching payment methods:', e);
+    }
+
+    // 5. Monthly Stats - execute sequentially to identify failing parts
+    try {
+      const qTotalUsers = await query(`SELECT COUNT(*) as c FROM users`);
+      monthlyStats.totalUsers = parseInt(qTotalUsers.rows[0].c);
+
+      const qNewUsers = await query(`SELECT COUNT(*) as c FROM users WHERE created_at >= DATE_TRUNC('month', CURRENT_DATE)`);
+      monthlyStats.newUsers = parseInt(qNewUsers.rows[0].c);
+
+      // Try revenue stats with safe fallback
+      try {
+        const qTotalRev = await query(`SELECT COALESCE(SUM(plan_price), 0) as s FROM subscriptions WHERE is_active = true`);
+        monthlyStats.totalRevenue = parseFloat(qTotalRev.rows[0].s);
+
+        const qMonthlyRev = await query(`SELECT COALESCE(SUM(plan_price), 0) as s FROM subscriptions WHERE is_active = true AND created_at >= DATE_TRUNC('month', CURRENT_DATE)`);
+        monthlyStats.monthlyRevenue = parseFloat(qMonthlyRev.rows[0].s);
+      } catch (revErr) {
+        console.error('Revenue stats error, trying fallback:', revErr);
+        const qTotalRev = await query(`SELECT COALESCE(SUM(CAST(plan_price AS NUMERIC)), 0) as s FROM subscriptions WHERE is_active = true`);
+        monthlyStats.totalRevenue = parseFloat(qTotalRev.rows[0].s);
+
+        const qMonthlyRev = await query(`SELECT COALESCE(SUM(CAST(plan_price AS NUMERIC)), 0) as s FROM subscriptions WHERE is_active = true AND created_at >= DATE_TRUNC('month', CURRENT_DATE)`);
+        monthlyStats.monthlyRevenue = parseFloat(qMonthlyRev.rows[0].s);
+      }
+
+      const qAppointments = await query(`SELECT COUNT(*) as c FROM appointments`);
+      monthlyStats.totalAppointments = parseInt(qAppointments.rows[0].c);
+
+      const qCompletedAppts = await query(`SELECT COUNT(*) as c FROM appointments WHERE status = 'completed'`);
+      monthlyStats.completedAppointments = parseInt(qCompletedAppts.rows[0].c);
+
+    } catch (e) {
+      console.error('Error fetching monthly stats:', e);
+    }
 
     return NextResponse.json({
       userGrowth,
@@ -130,17 +189,11 @@ export async function GET(request: NextRequest) {
       paymentMethods,
       monthlyStats,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Analytics fetch error:', error);
     return NextResponse.json(
-      { message: 'Internal server error' },
+      { message: `Internal server error: ${error.message}` },
       { status: 500 }
     );
   }
 }
-
-
-
-
-
-
