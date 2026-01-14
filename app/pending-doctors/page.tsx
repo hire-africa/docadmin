@@ -584,13 +584,53 @@ export default function PendingDoctorsPage() {
                     {selectedDoctor.license_number && (
                       <div>
                         <label className="block text-sm font-medium text-gray-700">Medical License</label>
-                        <p className="text-sm text-gray-900 font-mono">{selectedDoctor.license_number}</p>
+                        {(selectedDoctor.license_number.toLowerCase().endsWith('.jpg') ||
+                          selectedDoctor.license_number.toLowerCase().endsWith('.jpeg') ||
+                          selectedDoctor.license_number.toLowerCase().endsWith('.png')) ? (
+                          <div className="mt-2">
+                            <img
+                              src={`/api/documents?path=${encodeURIComponent(selectedDoctor.license_number)}&token=${token}`}
+                              alt="Medical License"
+                              className="max-w-full h-auto rounded-lg border border-gray-200"
+                            />
+                            <a
+                              href={`/api/documents?path=${encodeURIComponent(selectedDoctor.license_number)}&token=${token}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-xs text-blue-600 hover:text-blue-800 mt-1 inline-block"
+                            >
+                              View full size
+                            </a>
+                          </div>
+                        ) : (
+                          <p className="text-sm text-gray-900 font-mono">{selectedDoctor.license_number}</p>
+                        )}
                       </div>
                     )}
                     {selectedDoctor.medical_degree && (
                       <div>
                         <label className="block text-sm font-medium text-gray-700">Medical Degree</label>
-                        <p className="text-sm text-gray-900">{selectedDoctor.medical_degree}</p>
+                        {(selectedDoctor.medical_degree.toLowerCase().endsWith('.jpg') ||
+                          selectedDoctor.medical_degree.toLowerCase().endsWith('.jpeg') ||
+                          selectedDoctor.medical_degree.toLowerCase().endsWith('.png')) ? (
+                          <div className="mt-2">
+                            <img
+                              src={`/api/documents?path=${encodeURIComponent(selectedDoctor.medical_degree)}&token=${token}`}
+                              alt="Medical Degree"
+                              className="max-w-full h-auto rounded-lg border border-gray-200"
+                            />
+                            <a
+                              href={`/api/documents?path=${encodeURIComponent(selectedDoctor.medical_degree)}&token=${token}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-xs text-blue-600 hover:text-blue-800 mt-1 inline-block"
+                            >
+                              View full size
+                            </a>
+                          </div>
+                        ) : (
+                          <p className="text-sm text-gray-900">{selectedDoctor.medical_degree}</p>
+                        )}
                       </div>
                     )}
                     {selectedDoctor.hospital_affiliation && (

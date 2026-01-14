@@ -31,11 +31,28 @@ export async function GET(request: NextRequest) {
         }
 
         // Construct absolute path
-        // Assumption: files are relative to project root
-        const absolutePath = path.join(process.cwd(), filePathParam);
+        // Check multiple potential locations
+        const possiblePaths = [
+            path.join(process.cwd(), filePathParam),
+            path.join(process.cwd(), 'public', filePathParam),
+            path.join(process.cwd(), '..', filePathParam), // Sibling directory
+            path.join(process.cwd(), '..', 'storage', 'app', filePathParam), // Laravel storage structure
+            path.join(process.cwd(), 'storage', 'app', filePathParam),
+        ];
 
-        if (!fs.existsSync(absolutePath)) {
-            console.error(`File not found: ${absolutePath}`);
+        let absolutePath = '';
+        let found = false;
+
+        for (const p of possiblePaths) {
+            if (fs.existsSync(p)) {
+                absolutePath = p;
+                found = true;
+                break;
+            }
+        }
+
+        if (!found) {
+            console.error(`File not found. Searched in:`, possiblePaths);
             return new NextResponse('File not found', { status: 404 });
         }
 
