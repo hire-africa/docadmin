@@ -69,13 +69,12 @@ export async function PUT(
     try {
       const result = await query(`
         UPDATE plans 
-        SET name = $1, description = $2, price = $3, currency = $4, duration = $5, 
-            text_sessions = $6, voice_calls = $7, video_calls = $8, features = $9, status = $10
-        WHERE id = $11
+        SET name = $1, price = $2, currency = $3, duration = $4, 
+            text_sessions = $5, voice_calls = $6, video_calls = $7, features = $8, status = $9
+        WHERE id = $10
         RETURNING *
       `, [
         name,
-        description || null,
         priceNum,
         normalizedCurrency,
         duration || 30,

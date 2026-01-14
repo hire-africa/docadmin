@@ -35,7 +35,7 @@ export default function AnalyticsPage() {
       console.log('🔍 Fetching analytics data...');
       console.log('Time range:', timeRange);
       console.log('Token exists:', !!token);
-      
+
       const response = await fetch(`/api/analytics?range=${timeRange}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -138,7 +138,7 @@ export default function AnalyticsPage() {
           <Activity className="h-12 w-12 mx-auto mb-4 text-gray-300" />
           <h3 className="text-lg font-medium text-gray-900 mb-2">No Analytics Data</h3>
           <p className="text-gray-500">Analytics data is not available at the moment.</p>
-          <button 
+          <button
             onClick={fetchAnalytics}
             className="mt-4 px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700"
           >
@@ -201,14 +201,14 @@ export default function AnalyticsPage() {
               <div className="ml-5 w-0 flex-1">
                 <dl>
                   <dt className="text-sm font-medium text-gray-500 truncate">Total Revenue</dt>
-                  <dd className="text-lg font-medium text-gray-900">${data.monthlyStats.totalRevenue.toLocaleString()}</dd>
+                  <dd className="text-lg font-medium text-gray-900">MK{data.monthlyStats.totalRevenue.toLocaleString()}</dd>
                 </dl>
               </div>
             </div>
             <div className="mt-4">
               <div className="flex items-center text-sm text-green-600">
                 <TrendingUp className="h-4 w-4 mr-1" />
-                <span>${data.monthlyStats.monthlyRevenue.toLocaleString()} this month</span>
+                <span>MK{data.monthlyStats.monthlyRevenue.toLocaleString()} this month</span>
               </div>
             </div>
           </div>
@@ -242,7 +242,7 @@ export default function AnalyticsPage() {
                 <dl>
                   <dt className="text-sm font-medium text-gray-500 truncate">Completion Rate</dt>
                   <dd className="text-lg font-medium text-gray-900">
-                    {data.monthlyStats.totalAppointments > 0 
+                    {data.monthlyStats.totalAppointments > 0
                       ? Math.round((data.monthlyStats.completedAppointments / data.monthlyStats.totalAppointments) * 100)
                       : 0}%
                   </dd>
@@ -318,7 +318,7 @@ export default function AnalyticsPage() {
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="method" />
                 <YAxis />
-                <Tooltip formatter={(value, name) => [value, name === 'amount' ? 'Amount ($)' : 'Count']} />
+                <Tooltip formatter={(value, name) => [value, name === 'amount' ? 'Amount (MK)' : 'Count']} />
                 <Bar dataKey="count" fill="#3b82f6" />
               </BarChart>
             </ResponsiveContainer>

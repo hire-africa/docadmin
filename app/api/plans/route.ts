@@ -5,7 +5,7 @@ import { query } from '@/lib/database';
 export async function GET(request: NextRequest) {
   try {
     const token = request.headers.get('authorization')?.replace('Bearer ', '');
-    
+
     if (!token || !verifyToken(token)) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
@@ -23,7 +23,6 @@ export async function GET(request: NextRequest) {
     const plans = plansResult.rows.map(row => ({
       id: row.id,
       name: row.name,
-      description: row.description,
       price: row.price,
       currency: row.currency,
       duration: row.duration,
@@ -49,7 +48,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const token = request.headers.get('authorization')?.replace('Bearer ', '');
-    
+
     if (!token || !verifyToken(token)) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
@@ -92,12 +91,11 @@ export async function POST(request: NextRequest) {
     }
 
     const result = await query(`
-      INSERT INTO plans (name, description, price, currency, duration, text_sessions, voice_calls, video_calls, features, status)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      INSERT INTO plans (name, price, currency, duration, text_sessions, voice_calls, video_calls, features, status)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
       RETURNING *
     `, [
       name,
-      description || null,
       priceNum,
       normalizedCurrency,
       duration || 30,
