@@ -61,10 +61,12 @@ export default function PendingDoctorsPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null);
   const [showModal, setShowModal] = useState(false);
+  const [token, setToken] = useState('');
 
   const itemsPerPage = 10;
 
   useEffect(() => {
+    setToken(localStorage.getItem('admin_token') || '');
     fetchPendingDoctors();
   }, [currentPage, searchTerm]);
 
@@ -72,7 +74,7 @@ export default function PendingDoctorsPage() {
     try {
       setLoading(true);
       const token = localStorage.getItem('admin_token');
-      
+
       const params = new URLSearchParams({
         page: currentPage.toString(),
         limit: itemsPerPage.toString(),
@@ -115,7 +117,7 @@ export default function PendingDoctorsPage() {
 
       if (response.ok) {
         const data = await response.json();
-        
+
         // Show success message with email notification status
         if (data.emailNotification) {
           if (data.emailNotification.success) {
@@ -126,9 +128,9 @@ export default function PendingDoctorsPage() {
         } else {
           toast.success('Doctor status updated successfully');
         }
-        
+
         fetchPendingDoctors();
-        
+
         // Close modal if requested
         if (closeModal) {
           setShowModal(false);
@@ -483,7 +485,27 @@ export default function PendingDoctorsPage() {
                     {selectedDoctor.national_id && (
                       <div>
                         <label className="block text-sm font-medium text-gray-700">National ID</label>
-                        <p className="text-sm text-gray-900 font-mono">{selectedDoctor.national_id}</p>
+                        {(selectedDoctor.national_id.toLowerCase().endsWith('.jpg') ||
+                          selectedDoctor.national_id.toLowerCase().endsWith('.jpeg') ||
+                          selectedDoctor.national_id.toLowerCase().endsWith('.png')) ? (
+                          <div className="mt-2">
+                            <img
+                              src={`/api/documents?path=${encodeURIComponent(selectedDoctor.national_id)}&token=${token}`}
+                              alt="National ID"
+                              className="max-w-full h-auto rounded-lg border border-gray-200"
+                            />
+                            <a
+                              href={`/api/documents?path=${encodeURIComponent(selectedDoctor.national_id)}&token=${token}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-xs text-blue-600 hover:text-blue-800 mt-1 inline-block"
+                            >
+                              View full size
+                            </a>
+                          </div>
+                        ) : (
+                          <p className="text-sm text-gray-900 font-mono">{selectedDoctor.national_id}</p>
+                        )}
                       </div>
                     )}
                     {selectedDoctor.google_id && (
