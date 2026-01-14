@@ -32,18 +32,29 @@ export async function GET(request: NextRequest) {
 
         // Construct absolute path
         // Check multiple potential locations
+        // Log current directory for debugging
+        console.log(`Working directory: ${process.cwd()}`);
+        console.log(`Searching for: ${filePathParam}`);
+
         const possiblePaths = [
             path.join(process.cwd(), filePathParam),
             path.join(process.cwd(), 'public', filePathParam),
             path.join(process.cwd(), '..', filePathParam), // Sibling directory
             path.join(process.cwd(), '..', 'storage', 'app', filePathParam), // Laravel storage structure
             path.join(process.cwd(), 'storage', 'app', filePathParam),
+            // Common mount points for persistent storage
+            path.join('/mnt', filePathParam),
+            path.join('/var/www', filePathParam),
+            path.join('/app', filePathParam),
+            // Handle cases where the path itself might be absolute or relative to a different root
+            path.resolve(process.cwd(), filePathParam)
         ];
 
         let absolutePath = '';
         let found = false;
 
         for (const p of possiblePaths) {
+            console.log(`Checking path: ${p}`);
             if (fs.existsSync(p)) {
                 absolutePath = p;
                 found = true;
