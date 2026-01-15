@@ -5,6 +5,9 @@ import Layout from '@/components/Layout';
 import { Search, Filter, UserCheck, CheckCircle, XCircle, Eye, Clock, Star, Mail, Phone, MapPin, Calendar, User, Shield, GraduationCap, Building, DollarSign, Globe, AlertTriangle } from 'lucide-react';
 import toast from 'react-hot-toast';
 
+const CDN_URL = 'https://docavailable-storage.fra1.cdn.digitaloceanspaces.com';
+
+
 interface Doctor {
   id: number;
   first_name: string;
@@ -282,7 +285,7 @@ export default function PendingDoctorsPage() {
                               {doctor.profile_image ? (
                                 <img
                                   className="h-10 w-10 rounded-full object-cover"
-                                  src={doctor.profile_image}
+                                  src={doctor.profile_image.startsWith('http') ? doctor.profile_image : `${CDN_URL}/${doctor.profile_image}`}
                                   alt={`${doctor.first_name} ${doctor.last_name}`}
                                 />
                               ) : (
@@ -412,7 +415,7 @@ export default function PendingDoctorsPage() {
                       {selectedDoctor.profile_image ? (
                         <img
                           className="h-16 w-16 rounded-full object-cover"
-                          src={selectedDoctor.profile_image}
+                          src={selectedDoctor.profile_image.startsWith('http') ? selectedDoctor.profile_image : `${CDN_URL}/${selectedDoctor.profile_image}`}
                           alt={`${selectedDoctor.first_name} ${selectedDoctor.last_name}`}
                         />
                       ) : (
@@ -490,12 +493,12 @@ export default function PendingDoctorsPage() {
                           selectedDoctor.national_id.toLowerCase().endsWith('.png')) ? (
                           <div className="mt-2">
                             <img
-                              src={`/api/documents?path=${encodeURIComponent(selectedDoctor.national_id)}&token=${token}`}
+                              src={selectedDoctor.national_id.startsWith('http') ? selectedDoctor.national_id : `${CDN_URL}/${selectedDoctor.national_id}`}
                               alt="National ID"
                               className="max-w-full h-auto rounded-lg border border-gray-200"
                             />
                             <a
-                              href={`/api/documents?path=${encodeURIComponent(selectedDoctor.national_id)}&token=${token}`}
+                              href={selectedDoctor.national_id.startsWith('http') ? selectedDoctor.national_id : `${CDN_URL}/${selectedDoctor.national_id}`}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="text-xs text-blue-600 hover:text-blue-800 mt-1 inline-block"
@@ -589,12 +592,12 @@ export default function PendingDoctorsPage() {
                           selectedDoctor.license_number.toLowerCase().endsWith('.png')) ? (
                           <div className="mt-2">
                             <img
-                              src={`/api/documents?path=${encodeURIComponent(selectedDoctor.license_number)}&token=${token}`}
+                              src={selectedDoctor.license_number.startsWith('http') ? selectedDoctor.license_number : `${CDN_URL}/${selectedDoctor.license_number}`}
                               alt="Medical License"
                               className="max-w-full h-auto rounded-lg border border-gray-200"
                             />
                             <a
-                              href={`/api/documents?path=${encodeURIComponent(selectedDoctor.license_number)}&token=${token}`}
+                              href={selectedDoctor.license_number.startsWith('http') ? selectedDoctor.license_number : `${CDN_URL}/${selectedDoctor.license_number}`}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="text-xs text-blue-600 hover:text-blue-800 mt-1 inline-block"
@@ -615,12 +618,12 @@ export default function PendingDoctorsPage() {
                           selectedDoctor.medical_degree.toLowerCase().endsWith('.png')) ? (
                           <div className="mt-2">
                             <img
-                              src={`/api/documents?path=${encodeURIComponent(selectedDoctor.medical_degree)}&token=${token}`}
+                              src={selectedDoctor.medical_degree.startsWith('http') ? selectedDoctor.medical_degree : `${CDN_URL}/${selectedDoctor.medical_degree}`}
                               alt="Medical Degree"
                               className="max-w-full h-auto rounded-lg border border-gray-200"
                             />
                             <a
-                              href={`/api/documents?path=${encodeURIComponent(selectedDoctor.medical_degree)}&token=${token}`}
+                              href={selectedDoctor.medical_degree.startsWith('http') ? selectedDoctor.medical_degree : `${CDN_URL}/${selectedDoctor.medical_degree}`}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="text-xs text-blue-600 hover:text-blue-800 mt-1 inline-block"
