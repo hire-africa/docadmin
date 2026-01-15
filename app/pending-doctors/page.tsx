@@ -485,32 +485,7 @@ export default function PendingDoctorsPage() {
                         <p className="text-sm text-gray-900 capitalize">{selectedDoctor.gender}</p>
                       </div>
                     )}
-                    {selectedDoctor.national_id && (
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700">National ID</label>
-                        {(selectedDoctor.national_id.toLowerCase().endsWith('.jpg') ||
-                          selectedDoctor.national_id.toLowerCase().endsWith('.jpeg') ||
-                          selectedDoctor.national_id.toLowerCase().endsWith('.png')) ? (
-                          <div className="mt-2">
-                            <img
-                              src={selectedDoctor.national_id.startsWith('http') ? selectedDoctor.national_id : `${CDN_URL}/${selectedDoctor.national_id}`}
-                              alt="National ID"
-                              className="max-w-full h-auto rounded-lg border border-gray-200"
-                            />
-                            <a
-                              href={selectedDoctor.national_id.startsWith('http') ? selectedDoctor.national_id : `${CDN_URL}/${selectedDoctor.national_id}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-xs text-blue-600 hover:text-blue-800 mt-1 inline-block"
-                            >
-                              View full size
-                            </a>
-                          </div>
-                        ) : (
-                          <p className="text-sm text-gray-900 font-mono">{selectedDoctor.national_id}</p>
-                        )}
-                      </div>
-                    )}
+
                     {selectedDoctor.google_id && (
                       <div>
                         <label className="block text-sm font-medium text-gray-700">Google ID</label>
@@ -584,58 +559,7 @@ export default function PendingDoctorsPage() {
                         </p>
                       </div>
                     )}
-                    {selectedDoctor.license_number && (
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700">Medical License</label>
-                        {(selectedDoctor.license_number.toLowerCase().endsWith('.jpg') ||
-                          selectedDoctor.license_number.toLowerCase().endsWith('.jpeg') ||
-                          selectedDoctor.license_number.toLowerCase().endsWith('.png')) ? (
-                          <div className="mt-2">
-                            <img
-                              src={selectedDoctor.license_number.startsWith('http') ? selectedDoctor.license_number : `${CDN_URL}/${selectedDoctor.license_number}`}
-                              alt="Medical License"
-                              className="max-w-full h-auto rounded-lg border border-gray-200"
-                            />
-                            <a
-                              href={selectedDoctor.license_number.startsWith('http') ? selectedDoctor.license_number : `${CDN_URL}/${selectedDoctor.license_number}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-xs text-blue-600 hover:text-blue-800 mt-1 inline-block"
-                            >
-                              View full size
-                            </a>
-                          </div>
-                        ) : (
-                          <p className="text-sm text-gray-900 font-mono">{selectedDoctor.license_number}</p>
-                        )}
-                      </div>
-                    )}
-                    {selectedDoctor.medical_degree && (
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700">Medical Degree</label>
-                        {(selectedDoctor.medical_degree.toLowerCase().endsWith('.jpg') ||
-                          selectedDoctor.medical_degree.toLowerCase().endsWith('.jpeg') ||
-                          selectedDoctor.medical_degree.toLowerCase().endsWith('.png')) ? (
-                          <div className="mt-2">
-                            <img
-                              src={selectedDoctor.medical_degree.startsWith('http') ? selectedDoctor.medical_degree : `${CDN_URL}/${selectedDoctor.medical_degree}`}
-                              alt="Medical Degree"
-                              className="max-w-full h-auto rounded-lg border border-gray-200"
-                            />
-                            <a
-                              href={selectedDoctor.medical_degree.startsWith('http') ? selectedDoctor.medical_degree : `${CDN_URL}/${selectedDoctor.medical_degree}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-xs text-blue-600 hover:text-blue-800 mt-1 inline-block"
-                            >
-                              View full size
-                            </a>
-                          </div>
-                        ) : (
-                          <p className="text-sm text-gray-900">{selectedDoctor.medical_degree}</p>
-                        )}
-                      </div>
-                    )}
+
                     {selectedDoctor.hospital_affiliation && (
                       <div>
                         <label className="block text-sm font-medium text-gray-700">Hospital Affiliation</label>
@@ -738,6 +662,96 @@ export default function PendingDoctorsPage() {
                   <div className="mb-6">
                     <h4 className="text-lg font-semibold text-gray-900 mb-4 border-b pb-2">Bio</h4>
                     <p className="text-sm text-gray-900 bg-gray-50 p-4 rounded-md">{selectedDoctor.bio}</p>
+                  </div>
+                )}
+
+                {/* Verification Documents Section */}
+                {(selectedDoctor.national_id || selectedDoctor.license_number || selectedDoctor.medical_degree) && (
+                  <div className="mb-6">
+                    <h4 className="text-lg font-semibold text-gray-900 mb-4 border-b pb-2 flex items-center">
+                      <Shield className="h-5 w-5 mr-2" />
+                      Verification Documents
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {selectedDoctor.national_id && (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700">National ID</label>
+                          {(selectedDoctor.national_id.toLowerCase().endsWith('.jpg') ||
+                            selectedDoctor.national_id.toLowerCase().endsWith('.jpeg') ||
+                            selectedDoctor.national_id.toLowerCase().endsWith('.png')) ? (
+                            <div className="mt-2">
+                              <img
+                                src={selectedDoctor.national_id.startsWith('http') ? selectedDoctor.national_id : `${CDN_URL}/${selectedDoctor.national_id}`}
+                                alt="National ID"
+                                className="max-w-full h-auto rounded-lg border border-gray-200"
+                              />
+                              <a
+                                href={selectedDoctor.national_id.startsWith('http') ? selectedDoctor.national_id : `${CDN_URL}/${selectedDoctor.national_id}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-xs text-blue-600 hover:text-blue-800 mt-1 inline-block"
+                              >
+                                View full size
+                              </a>
+                            </div>
+                          ) : (
+                            <p className="text-sm text-gray-900 font-mono">{selectedDoctor.national_id}</p>
+                          )}
+                        </div>
+                      )}
+                      {selectedDoctor.license_number && (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700">Medical License</label>
+                          {(selectedDoctor.license_number.toLowerCase().endsWith('.jpg') ||
+                            selectedDoctor.license_number.toLowerCase().endsWith('.jpeg') ||
+                            selectedDoctor.license_number.toLowerCase().endsWith('.png')) ? (
+                            <div className="mt-2">
+                              <img
+                                src={selectedDoctor.license_number.startsWith('http') ? selectedDoctor.license_number : `${CDN_URL}/${selectedDoctor.license_number}`}
+                                alt="Medical License"
+                                className="max-w-full h-auto rounded-lg border border-gray-200"
+                              />
+                              <a
+                                href={selectedDoctor.license_number.startsWith('http') ? selectedDoctor.license_number : `${CDN_URL}/${selectedDoctor.license_number}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-xs text-blue-600 hover:text-blue-800 mt-1 inline-block"
+                              >
+                                View full size
+                              </a>
+                            </div>
+                          ) : (
+                            <p className="text-sm text-gray-900 font-mono">{selectedDoctor.license_number}</p>
+                          )}
+                        </div>
+                      )}
+                      {selectedDoctor.medical_degree && (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700">Medical Degree</label>
+                          {(selectedDoctor.medical_degree.toLowerCase().endsWith('.jpg') ||
+                            selectedDoctor.medical_degree.toLowerCase().endsWith('.jpeg') ||
+                            selectedDoctor.medical_degree.toLowerCase().endsWith('.png')) ? (
+                            <div className="mt-2">
+                              <img
+                                src={selectedDoctor.medical_degree.startsWith('http') ? selectedDoctor.medical_degree : `${CDN_URL}/${selectedDoctor.medical_degree}`}
+                                alt="Medical Degree"
+                                className="max-w-full h-auto rounded-lg border border-gray-200"
+                              />
+                              <a
+                                href={selectedDoctor.medical_degree.startsWith('http') ? selectedDoctor.medical_degree : `${CDN_URL}/${selectedDoctor.medical_degree}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-xs text-blue-600 hover:text-blue-800 mt-1 inline-block"
+                              >
+                                View full size
+                              </a>
+                            </div>
+                          ) : (
+                            <p className="text-sm text-gray-900">{selectedDoctor.medical_degree}</p>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
 
