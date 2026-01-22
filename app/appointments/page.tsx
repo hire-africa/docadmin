@@ -52,6 +52,7 @@ export default function AppointmentsPage() {
 
   const fetchAppointments = async () => {
     try {
+      setLoading(true);
       const token = localStorage.getItem('admin_token');
       const params = new URLSearchParams({
         page: currentPage.toString(),
@@ -69,12 +70,20 @@ export default function AppointmentsPage() {
 
       if (response.ok) {
         const data = await response.json();
-        setAppointments(data.appointments);
-        setTotalPages(data.totalPages);
+        setAppointments(data.appointments || []);
+        setTotalPages(data.totalPages || 1);
+      } else {
+        const errorData = await response.json().catch(() => ({ message: 'Failed to fetch appointments' }));
+        console.error('Error fetching appointments:', errorData);
+        toast.error(errorData.message || 'Failed to fetch appointments');
+        setAppointments([]);
+        setTotalPages(1);
       }
     } catch (error) {
       console.error('Error fetching appointments:', error);
       toast.error('Failed to fetch appointments');
+      setAppointments([]);
+      setTotalPages(1);
     } finally {
       setLoading(false);
     }

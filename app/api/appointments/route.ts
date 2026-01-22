@@ -19,29 +19,66 @@ export async function GET(request: NextRequest) {
 
     const offset = (page - 1) * limit;
 
-    // Build WHERE clause
-    let whereConditions = [];
+    // Build WHERE clauses for each table type
+    // Note: For UNION ALL, we need to handle parameters carefully
+    // Since each UNION part can reuse the same parameter, we'll use the same param number
     let params = [];
     let paramCount = 0;
 
+    // Build search condition - will be reused in all UNION parts
+    let searchCondition = '';
     if (search) {
       paramCount++;
-      whereConditions.push(`(
+      searchCondition = `(
         d.first_name ILIKE $${paramCount} OR d.last_name ILIKE $${paramCount} OR d.email ILIKE $${paramCount} OR
         p.first_name ILIKE $${paramCount} OR p.last_name ILIKE $${paramCount} OR p.email ILIKE $${paramCount}
-      )`);
+      )`;
+      // Add search param once - it will be reused in all UNION parts
       params.push(`%${search}%`);
     }
 
+    // Build WHERE clause for appointments
+    let appointmentConditions = [];
+    if (searchCondition) appointmentConditions.push(searchCondition);
     if (status !== 'all') {
-      whereConditions.push(`a.status = '${status}'`);
+      appointmentConditions.push(`a.status = '${status}'`);
     }
-
     if (type !== 'all') {
-      whereConditions.push(`a.appointment_type = '${type}'`);
+      appointmentConditions.push(`a.appointment_type = '${type}'`);
     }
+    const appointmentWhere = appointmentConditions.length > 0 ? `WHERE ${appointmentConditions.join(' AND ')}` : '';
 
-    const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : '';
+    // Build WHERE clause for text_sessions
+    let textSessionConditions = [];
+    if (searchCondition) textSessionConditions.push(searchCondition);
+    if (status !== 'all') {
+      textSessionConditions.push(`ts.status = '${status}'`);
+    }
+    if (type !== 'all' && type === 'text') {
+      // text_sessions are always type 'text', so only include if filtering for 'text'
+      // No additional condition needed
+    } else if (type !== 'all' && type !== 'text') {
+      // If filtering for a type other than 'text', exclude text_sessions
+      textSessionConditions.push('1 = 0'); // Always false condition
+    }
+    const textSessionWhere = textSessionConditions.length > 0 ? `WHERE ${textSessionConditions.join(' AND ')}` : '';
+
+    // Build WHERE clause for call_sessions
+    let callSessionConditions = [];
+    if (searchCondition) callSessionConditions.push(searchCondition);
+    if (status !== 'all') {
+      callSessionConditions.push(`cs.status = '${status}'`);
+    }
+    if (type !== 'all') {
+      // Map appointment types to call types
+      if (type === 'voice' || type === 'video' || type === 'call') {
+        callSessionConditions.push(`cs.call_type = '${type}'`);
+      } else {
+        // If filtering for 'text', exclude call_sessions
+        callSessionConditions.push('1 = 0'); // Always false condition
+      }
+    }
+    const callSessionWhere = callSessionConditions.length > 0 ? `WHERE ${callSessionConditions.join(' AND ')}` : '';
 
     // Get total count from all sources
     const countQuery = `
@@ -50,7 +87,7 @@ export async function GET(request: NextRequest) {
         FROM appointments a
         JOIN users d ON a.doctor_id = d.id
         JOIN users p ON a.patient_id = p.id
-        ${whereClause}
+        ${appointmentWhere}
         
         UNION ALL
         
@@ -58,7 +95,7 @@ export async function GET(request: NextRequest) {
         FROM text_sessions ts
         JOIN users d ON ts.doctor_id = d.id
         JOIN users p ON ts.patient_id = p.id
-        ${whereClause ? whereClause.replace(/a\./g, 'ts.') : ''}
+        ${textSessionWhere}
         
         UNION ALL
         
@@ -66,12 +103,15 @@ export async function GET(request: NextRequest) {
         FROM call_sessions cs
         JOIN users d ON cs.doctor_id = d.id
         JOIN users p ON cs.patient_id = p.id
-        ${whereClause ? whereClause.replace(/a\./g, 'cs.') : ''}
+        ${callSessionWhere}
       ) as combined
     `;
+    console.log('Count query:', countQuery);
+    console.log('Count params:', params);
     const countResult = await query(countQuery, params);
-    const totalCount = parseInt(countResult.rows[0].count);
+    const totalCount = parseInt(countResult.rows[0]?.count || 0);
     const totalPages = Math.ceil(totalCount / limit);
+    console.log('Total count:', totalCount);
 
     // Get appointments with session data
     paramCount++;
@@ -92,7 +132,7 @@ export async function GET(request: NextRequest) {
       FROM appointments a
       JOIN users d ON a.doctor_id = d.id
       JOIN users p ON a.patient_id = p.id
-      ${whereClause}
+      ${appointmentWhere}
       
       UNION ALL
       
@@ -112,7 +152,7 @@ export async function GET(request: NextRequest) {
       FROM text_sessions ts
       JOIN users d ON ts.doctor_id = d.id
       JOIN users p ON ts.patient_id = p.id
-      ${whereClause ? whereClause.replace(/a\./g, 'ts.') : ''}
+      ${textSessionWhere}
       
       UNION ALL
       
@@ -132,14 +172,17 @@ export async function GET(request: NextRequest) {
       FROM call_sessions cs
       JOIN users d ON cs.doctor_id = d.id
       JOIN users p ON cs.patient_id = p.id
-      ${whereClause ? whereClause.replace(/a\./g, 'cs.') : ''}
+      ${callSessionWhere}
       
       ORDER BY created_at DESC
       LIMIT $${paramCount} OFFSET $${paramCount + 1}
     `;
     params.push(limit, offset);
 
+    console.log('Appointments query:', appointmentsQuery);
+    console.log('Appointments params:', params);
     const appointmentsResult = await query(appointmentsQuery, params);
+    console.log('Appointments result count:', appointmentsResult.rows.length);
 
     // Format the response
     const appointments = appointmentsResult.rows.map(row => ({
@@ -178,10 +221,11 @@ export async function GET(request: NextRequest) {
       currentPage: page,
       totalCount,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Appointments fetch error:', error);
+    console.error('Error details:', error.message, error.stack);
     return NextResponse.json(
-      { message: 'Internal server error' },
+      { message: 'Internal server error', error: error.message },
       { status: 500 }
     );
   }
