@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
         u.public_key, u.private_key, u.encryption_enabled,
         u.notification_preferences, u.privacy_preferences,
         u.email_notifications_enabled, u.push_notifications_enabled, u.sms_notifications_enabled,
-        u.role, u.id_document, u.professional_bio,
+        u.id_document,
         u.specialization, u.sub_specialization, u.specializations,
         u.languages_spoken, u.sub_specializations, u.years_of_experience
       FROM users u
@@ -85,7 +85,7 @@ export async function GET(request: NextRequest) {
       specialization: row.specializations,
       license_number: row.medical_licence,
       experience_years: row.years_of_experience,
-      bio: row.bio || row.professional_bio,
+      bio: row.bio,
       profile_image: row.profile_picture,
       // Additional comprehensive information
       city: row.city,

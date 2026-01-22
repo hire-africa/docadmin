@@ -86,7 +86,7 @@ export default function AppointmentsPage() {
     fetchAppointments();
   };
 
-  const handleStatusChange = async (appointmentId: number, newStatus: string) => {
+  const handleStatusChange = async (appointmentId: number, newStatus: string, sourceType: string) => {
     try {
       const token = localStorage.getItem('admin_token');
       const response = await fetch(`/api/appointments/${appointmentId}/status`, {
@@ -95,18 +95,19 @@ export default function AppointmentsPage() {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ status: newStatus }),
+        body: JSON.stringify({ status: newStatus, source_type: sourceType }),
       });
 
       if (response.ok) {
-        toast.success('Appointment status updated successfully');
+        toast.success('Status updated successfully');
         fetchAppointments();
       } else {
-        toast.error('Failed to update appointment status');
+        const errorData = await response.json();
+        toast.error(errorData.message || 'Failed to update status');
       }
     } catch (error) {
-      console.error('Error updating appointment status:', error);
-      toast.error('Failed to update appointment status');
+      console.error('Error updating status:', error);
+      toast.error('Failed to update status');
     }
   };
 
@@ -114,7 +115,9 @@ export default function AppointmentsPage() {
     const statusClasses = {
       pending: 'bg-yellow-100 text-yellow-800',
       confirmed: 'bg-blue-100 text-blue-800',
+      active: 'bg-purple-100 text-purple-800',
       completed: 'bg-green-100 text-green-800',
+      ended: 'bg-gray-100 text-gray-800',
       cancelled: 'bg-red-100 text-red-800',
     };
     return statusClasses[status as keyof typeof statusClasses] || 'bg-gray-100 text-gray-800';
@@ -207,7 +210,9 @@ export default function AppointmentsPage() {
                   <option value="all">All Statuses</option>
                   <option value="pending">Pending</option>
                   <option value="confirmed">Confirmed</option>
+                  <option value="active">Active</option>
                   <option value="completed">Completed</option>
+                  <option value="ended">Ended</option>
                   <option value="cancelled">Cancelled</option>
                 </select>
               </div>
@@ -357,12 +362,14 @@ export default function AppointmentsPage() {
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <select
                         value={appointment.status}
-                        onChange={(e) => handleStatusChange(appointment.id, e.target.value)}
+                        onChange={(e) => handleStatusChange(appointment.id, e.target.value, appointment.source_type)}
                         className="text-xs border border-gray-300 rounded px-2 py-1"
                       >
                         <option value="pending">Pending</option>
                         <option value="confirmed">Confirmed</option>
+                        <option value="active">Active</option>
                         <option value="completed">Completed</option>
+                        <option value="ended">Ended</option>
                         <option value="cancelled">Cancelled</option>
                       </select>
                     </td>

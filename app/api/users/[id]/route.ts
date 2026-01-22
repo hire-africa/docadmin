@@ -27,7 +27,7 @@ export async function GET(
         u.public_key, u.private_key, u.encryption_enabled,
         u.notification_preferences, u.privacy_preferences,
         u.email_notifications_enabled, u.push_notifications_enabled, u.sms_notifications_enabled,
-        u.role, u.id_document, u.professional_bio,
+        u.id_document,
         u.specialization, u.sub_specialization, u.specializations,
         u.languages_spoken, u.sub_specializations, u.years_of_experience
       FROM users u
@@ -129,33 +129,38 @@ export async function GET(
       SELECT 
         last_online_at as last_login, 
         created_at as account_created,
-        EXTRACT(EPOCH FROM (NOW() - last_online_at)) / 3600 as hours_since_last_login,
+        CASE 
+          WHEN last_online_at IS NULL THEN NULL
+          ELSE EXTRACT(EPOCH FROM (NOW() - last_online_at)) / 3600
+        END as hours_since_last_login,
         'Unknown' as ip_type
       FROM users
       WHERE id = $1
     `;
 
     const deviceResult = await query(deviceQuery, [id]);
-    const deviceInfo = deviceResult.rows[0];
+    const deviceInfo = deviceResult.rows[0] || {};
 
     // Security flags
     const securityFlags = [];
     
-    // Check for suspicious activity
-    if (deviceInfo.hours_since_last_login > 24 * 30) { // 30 days
-      securityFlags.push({
-        type: 'warning',
-        message: 'User has not been online for over 30 days',
-        severity: 'medium'
-      });
-    }
+    // Check for suspicious activity (only if hours_since_last_login is not null)
+    if (deviceInfo && deviceInfo.hours_since_last_login !== null && deviceInfo.hours_since_last_login !== undefined) {
+      if (deviceInfo.hours_since_last_login > 24 * 30) { // 30 days
+        securityFlags.push({
+          type: 'warning',
+          message: 'User has not been online for over 30 days',
+          severity: 'medium'
+        });
+      }
 
-    if (deviceInfo.hours_since_last_login > 24 * 90) { // 90 days
-      securityFlags.push({
-        type: 'danger',
-        message: 'User has not been online for over 90 days',
-        severity: 'high'
-      });
+      if (deviceInfo.hours_since_last_login > 24 * 90) { // 90 days
+        securityFlags.push({
+          type: 'danger',
+          message: 'User has not been online for over 90 days',
+          severity: 'high'
+        });
+      }
     }
 
     if (user.user_type === 'doctor' && !user.medical_licence) {
