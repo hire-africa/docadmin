@@ -83,7 +83,7 @@ export async function GET(request: NextRequest) {
     // Get total count from all sources
     const countQuery = `
       SELECT COUNT(*) as count FROM (
-        SELECT a.id
+        SELECT a.id::integer
         FROM appointments a
         JOIN users d ON a.doctor_id = d.id
         JOIN users p ON a.patient_id = p.id
@@ -91,7 +91,7 @@ export async function GET(request: NextRequest) {
         
         UNION ALL
         
-        SELECT ts.id
+        SELECT ts.id::integer
         FROM text_sessions ts
         JOIN users d ON ts.doctor_id = d.id
         JOIN users p ON ts.patient_id = p.id
@@ -99,7 +99,7 @@ export async function GET(request: NextRequest) {
         
         UNION ALL
         
-        SELECT cs.id
+        SELECT cs.id::integer
         FROM call_sessions cs
         JOIN users d ON cs.doctor_id = d.id
         JOIN users p ON cs.patient_id = p.id
@@ -114,21 +114,31 @@ export async function GET(request: NextRequest) {
     console.log('Total count:', totalCount);
 
     // Get appointments with session data
+    // Note: All columns in UNION must have matching types, so we cast them explicitly
     paramCount++;
     const appointmentsQuery = `
       SELECT 
-        a.id, a.doctor_id, a.patient_id, a.appointment_type, a.status,
-        a.appointment_date as scheduled_date, a.appointment_time as scheduled_time, 
-        a.duration_minutes as duration, a.reason as notes, a.created_at,
-        d.first_name as doctor_first_name, d.last_name as doctor_last_name, d.email as doctor_email,
-        p.first_name as patient_first_name, p.last_name as patient_last_name, p.email as patient_email,
-        'appointment' as source_type,
-        NULL as session_id,
-        NULL as session_status,
-        a.actual_start_time as session_started_at,
-        a.actual_end_time as session_ended_at,
-        NULL as call_duration,
-        a.sessions_deducted as sessions_used
+        a.id::integer, a.doctor_id::integer, a.patient_id::integer, 
+        COALESCE(a.appointment_type::text, '') as appointment_type, 
+        COALESCE(a.status::text, '') as status,
+        a.appointment_date::text as scheduled_date, 
+        a.appointment_time::text as scheduled_time, 
+        COALESCE(a.duration_minutes::integer, NULL) as duration, 
+        COALESCE(a.reason::text, '') as notes, 
+        a.created_at::timestamp,
+        d.first_name::text as doctor_first_name, 
+        d.last_name::text as doctor_last_name, 
+        d.email::text as doctor_email,
+        p.first_name::text as patient_first_name, 
+        p.last_name::text as patient_last_name, 
+        p.email::text as patient_email,
+        'appointment'::text as source_type,
+        NULL::integer as session_id,
+        NULL::text as session_status,
+        a.actual_start_time::timestamp as session_started_at,
+        a.actual_end_time::timestamp as session_ended_at,
+        NULL::integer as call_duration,
+        COALESCE(a.sessions_deducted::integer, NULL) as sessions_used
       FROM appointments a
       JOIN users d ON a.doctor_id = d.id
       JOIN users p ON a.patient_id = p.id
@@ -137,18 +147,27 @@ export async function GET(request: NextRequest) {
       UNION ALL
       
       SELECT 
-        ts.id as id, ts.doctor_id, ts.patient_id, 'text' as appointment_type, 
-        ts.status, NULL as scheduled_date, NULL as scheduled_time, 
-        NULL as duration, ts.description as notes, ts.created_at,
-        d.first_name as doctor_first_name, d.last_name as doctor_last_name, d.email as doctor_email,
-        p.first_name as patient_first_name, p.last_name as patient_last_name, p.email as patient_email,
-        'text_session' as source_type,
-        ts.id as session_id,
-        ts.status as session_status,
-        ts.started_at as session_started_at,
-        ts.ended_at as session_ended_at,
-        NULL as call_duration,
-        ts.sessions_used
+        ts.id::integer, ts.doctor_id::integer, ts.patient_id::integer, 
+        'text'::text as appointment_type, 
+        COALESCE(ts.status::text, '') as status, 
+        NULL::text as scheduled_date, 
+        NULL::text as scheduled_time, 
+        NULL::integer as duration, 
+        COALESCE(ts.description::text, '') as notes, 
+        ts.created_at::timestamp,
+        d.first_name::text as doctor_first_name, 
+        d.last_name::text as doctor_last_name, 
+        d.email::text as doctor_email,
+        p.first_name::text as patient_first_name, 
+        p.last_name::text as patient_last_name, 
+        p.email::text as patient_email,
+        'text_session'::text as source_type,
+        ts.id::integer as session_id,
+        COALESCE(ts.status::text, '') as session_status,
+        ts.started_at::timestamp as session_started_at,
+        ts.ended_at::timestamp as session_ended_at,
+        NULL::integer as call_duration,
+        COALESCE(ts.sessions_used::integer, NULL) as sessions_used
       FROM text_sessions ts
       JOIN users d ON ts.doctor_id = d.id
       JOIN users p ON ts.patient_id = p.id
@@ -157,18 +176,27 @@ export async function GET(request: NextRequest) {
       UNION ALL
       
       SELECT 
-        cs.id as id, cs.doctor_id, cs.patient_id, cs.call_type as appointment_type, 
-        cs.status, NULL as scheduled_date, NULL as scheduled_time, 
-        cs.call_duration as duration, cs.reason as notes, cs.created_at,
-        d.first_name as doctor_first_name, d.last_name as doctor_last_name, d.email as doctor_email,
-        p.first_name as patient_first_name, p.last_name as patient_last_name, p.email as patient_email,
-        'call_session' as source_type,
-        cs.id as session_id,
-        cs.status as session_status,
-        cs.started_at as session_started_at,
-        cs.ended_at as session_ended_at,
-        cs.call_duration,
-        cs.sessions_used
+        cs.id::integer, cs.doctor_id::integer, cs.patient_id::integer, 
+        COALESCE(cs.call_type::text, '') as appointment_type, 
+        COALESCE(cs.status::text, '') as status, 
+        NULL::text as scheduled_date, 
+        NULL::text as scheduled_time, 
+        COALESCE(cs.call_duration::integer, NULL) as duration, 
+        COALESCE(cs.reason::text, '') as notes, 
+        cs.created_at::timestamp,
+        d.first_name::text as doctor_first_name, 
+        d.last_name::text as doctor_last_name, 
+        d.email::text as doctor_email,
+        p.first_name::text as patient_first_name, 
+        p.last_name::text as patient_last_name, 
+        p.email::text as patient_email,
+        'call_session'::text as source_type,
+        cs.id::integer as session_id,
+        COALESCE(cs.status::text, '') as session_status,
+        cs.started_at::timestamp as session_started_at,
+        cs.ended_at::timestamp as session_ended_at,
+        COALESCE(cs.call_duration::integer, NULL) as call_duration,
+        COALESCE(cs.sessions_used::integer, NULL) as sessions_used
       FROM call_sessions cs
       JOIN users d ON cs.doctor_id = d.id
       JOIN users p ON cs.patient_id = p.id
