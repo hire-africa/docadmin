@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Layout from '@/components/Layout';
-import { Search, Filter, MoreVertical, Eye, CheckCircle, XCircle, Calendar, DollarSign } from 'lucide-react';
+import { Search, Filter, MoreVertical, Eye, CheckCircle, XCircle, Calendar, DollarSign, Edit2, Save, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 interface Subscription {
@@ -35,6 +35,13 @@ export default function SubscriptionsPage() {
   const [filterStatus, setFilterStatus] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editValues, setEditValues] = useState<{
+    text_sessions_remaining: number;
+    voice_calls_remaining: number;
+    video_calls_remaining: number;
+    appointments_remaining: number;
+  } | null>(null);
 
   const itemsPerPage = 10;
 
@@ -44,6 +51,7 @@ export default function SubscriptionsPage() {
 
   const fetchSubscriptions = async () => {
     try {
+      setLoading(true);
       const token = localStorage.getItem('admin_token');
       const params = new URLSearchParams({
         page: currentPage.toString(),
@@ -60,12 +68,20 @@ export default function SubscriptionsPage() {
 
       if (response.ok) {
         const data = await response.json();
-        setSubscriptions(data.subscriptions);
-        setTotalPages(data.totalPages);
+        setSubscriptions(data.subscriptions || []);
+        setTotalPages(data.totalPages || 1);
+      } else {
+        const errorData = await response.json().catch(() => ({ message: 'Failed to fetch subscriptions' }));
+        console.error('Error fetching subscriptions:', errorData);
+        toast.error(errorData.message || 'Failed to fetch subscriptions');
+        setSubscriptions([]);
+        setTotalPages(1);
       }
     } catch (error) {
       console.error('Error fetching subscriptions:', error);
       toast.error('Failed to fetch subscriptions');
+      setSubscriptions([]);
+      setTotalPages(1);
     } finally {
       setLoading(false);
     }
@@ -99,6 +115,60 @@ export default function SubscriptionsPage() {
       console.error('Error updating subscription status:', error);
       toast.error('Failed to update subscription status');
     }
+  };
+
+  const handleEdit = (subscription: Subscription) => {
+    setEditingId(subscription.id);
+    setEditValues({
+      text_sessions_remaining: subscription.text_sessions_remaining,
+      voice_calls_remaining: subscription.voice_calls_remaining,
+      video_calls_remaining: subscription.video_calls_remaining,
+      appointments_remaining: subscription.appointments_remaining,
+    });
+  };
+
+  const handleCancelEdit = () => {
+    setEditingId(null);
+    setEditValues(null);
+  };
+
+  const handleSaveEdit = async (subscriptionId: number) => {
+    if (!editValues) return;
+
+    try {
+      const token = localStorage.getItem('admin_token');
+      const response = await fetch(`/api/subscriptions/${subscriptionId}`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(editValues),
+      });
+
+      if (response.ok) {
+        toast.success('Subscription updated successfully');
+        setEditingId(null);
+        setEditValues(null);
+        fetchSubscriptions();
+      } else {
+        const errorData = await response.json().catch(() => ({ message: 'Failed to update subscription' }));
+        toast.error(errorData.message || 'Failed to update subscription');
+      }
+    } catch (error) {
+      console.error('Error updating subscription:', error);
+      toast.error('Failed to update subscription');
+    }
+  };
+
+  const handleEditValueChange = (field: keyof typeof editValues, value: string) => {
+    if (!editValues) return;
+    const numValue = parseInt(value) || 0;
+    if (numValue < 0) return;
+    setEditValues({
+      ...editValues,
+      [field]: numValue,
+    });
   };
 
   const getStatusBadge = (isActive: boolean) => {
@@ -258,12 +328,57 @@ export default function SubscriptionsPage() {
                       {getStatusBadge(subscription.is_active)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">
-                        <div>Text: {subscription.text_sessions_remaining}</div>
-                        <div>Voice: {subscription.voice_calls_remaining}</div>
-                        <div>Video: {subscription.video_calls_remaining}</div>
-                        <div>Appointments: {subscription.appointments_remaining}</div>
-                      </div>
+                      {editingId === subscription.id && editValues ? (
+                        <div className="space-y-2">
+                          <div className="flex items-center space-x-2">
+                            <label className="text-xs text-gray-500 w-20">Text:</label>
+                            <input
+                              type="number"
+                              min="0"
+                              value={editValues.text_sessions_remaining}
+                              onChange={(e) => handleEditValueChange('text_sessions_remaining', e.target.value)}
+                              className="w-20 px-2 py-1 text-xs border border-gray-300 rounded"
+                            />
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <label className="text-xs text-gray-500 w-20">Voice:</label>
+                            <input
+                              type="number"
+                              min="0"
+                              value={editValues.voice_calls_remaining}
+                              onChange={(e) => handleEditValueChange('voice_calls_remaining', e.target.value)}
+                              className="w-20 px-2 py-1 text-xs border border-gray-300 rounded"
+                            />
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <label className="text-xs text-gray-500 w-20">Video:</label>
+                            <input
+                              type="number"
+                              min="0"
+                              value={editValues.video_calls_remaining}
+                              onChange={(e) => handleEditValueChange('video_calls_remaining', e.target.value)}
+                              className="w-20 px-2 py-1 text-xs border border-gray-300 rounded"
+                            />
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <label className="text-xs text-gray-500 w-20">Appts:</label>
+                            <input
+                              type="number"
+                              min="0"
+                              value={editValues.appointments_remaining}
+                              onChange={(e) => handleEditValueChange('appointments_remaining', e.target.value)}
+                              className="w-20 px-2 py-1 text-xs border border-gray-300 rounded"
+                            />
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-sm text-gray-900">
+                          <div>Text: {subscription.text_sessions_remaining}</div>
+                          <div>Voice: {subscription.voice_calls_remaining}</div>
+                          <div>Video: {subscription.video_calls_remaining}</div>
+                          <div>Appointments: {subscription.appointments_remaining}</div>
+                        </div>
+                      )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       <div>
@@ -273,20 +388,49 @@ export default function SubscriptionsPage() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex items-center justify-end space-x-2">
-                        <button
-                          onClick={() => handleStatusToggle(subscription.id, subscription.is_active)}
-                          className={`${
-                            subscription.is_active
-                              ? 'text-red-600 hover:text-red-900'
-                              : 'text-green-600 hover:text-green-900'
-                          }`}
-                        >
-                          {subscription.is_active ? (
-                            <XCircle className="h-4 w-4" />
-                          ) : (
-                            <CheckCircle className="h-4 w-4" />
-                          )}
-                        </button>
+                        {editingId === subscription.id ? (
+                          <>
+                            <button
+                              onClick={() => handleSaveEdit(subscription.id)}
+                              className="text-green-600 hover:text-green-900"
+                              title="Save"
+                            >
+                              <Save className="h-4 w-4" />
+                            </button>
+                            <button
+                              onClick={handleCancelEdit}
+                              className="text-red-600 hover:text-red-900"
+                              title="Cancel"
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <button
+                              onClick={() => handleEdit(subscription)}
+                              className="text-blue-600 hover:text-blue-900"
+                              title="Edit sessions"
+                            >
+                              <Edit2 className="h-4 w-4" />
+                            </button>
+                            <button
+                              onClick={() => handleStatusToggle(subscription.id, subscription.is_active)}
+                              className={`${
+                                subscription.is_active
+                                  ? 'text-red-600 hover:text-red-900'
+                                  : 'text-green-600 hover:text-green-900'
+                              }`}
+                              title={subscription.is_active ? 'Deactivate' : 'Activate'}
+                            >
+                              {subscription.is_active ? (
+                                <XCircle className="h-4 w-4" />
+                              ) : (
+                                <CheckCircle className="h-4 w-4" />
+                              )}
+                            </button>
+                          </>
+                        )}
                       </div>
                     </td>
                   </tr>
