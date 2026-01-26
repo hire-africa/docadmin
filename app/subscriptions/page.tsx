@@ -117,6 +117,36 @@ export default function SubscriptionsPage() {
     }
   };
 
+  const handleQuickAdd = async (subscription: Subscription) => {
+    try {
+      const token = localStorage.getItem('admin_token');
+      const response = await fetch(`/api/subscriptions/${subscription.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          text_sessions_remaining: subscription.text_sessions_remaining + 5,
+          voice_calls_remaining: subscription.voice_calls_remaining + 5,
+          video_calls_remaining: subscription.video_calls_remaining + 5,
+          appointments_remaining: subscription.appointments_remaining + 5,
+        }),
+      });
+
+      if (response.ok) {
+        toast.success('Added 5 sessions/calls successfully');
+        fetchSubscriptions();
+      } else {
+        const errorData = await response.json().catch(() => ({ message: 'Failed to update subscription' }));
+        toast.error(errorData.message || 'Failed to update subscription');
+      }
+    } catch (error) {
+      console.error('Error updating subscription:', error);
+      toast.error('Failed to update subscription');
+    }
+  };
+
   const handleEdit = (subscription: Subscription) => {
     setEditingId(subscription.id);
     setEditValues({
@@ -161,7 +191,7 @@ export default function SubscriptionsPage() {
     }
   };
 
-  const handleEditValueChange = (field: keyof typeof editValues, value: string) => {
+  const handleEditValueChange = (field: keyof NonNullable<typeof editValues>, value: string) => {
     if (!editValues) return;
     const numValue = parseInt(value) || 0;
     if (numValue < 0) return;
@@ -415,12 +445,20 @@ export default function SubscriptionsPage() {
                               <Edit2 className="h-4 w-4" />
                             </button>
                             <button
+                              onClick={() => handleQuickAdd(subscription)}
+                              className="text-purple-600 hover:text-purple-900"
+                              title="Quick Add 5 Sessions (Debug)"
+                            >
+                              <div className="text-xs font-bold flex flex-col items-center">
+                                <span>+5</span>
+                              </div>
+                            </button>
+                            <button
                               onClick={() => handleStatusToggle(subscription.id, subscription.is_active)}
-                              className={`${
-                                subscription.is_active
-                                  ? 'text-red-600 hover:text-red-900'
-                                  : 'text-green-600 hover:text-green-900'
-                              }`}
+                              className={`${subscription.is_active
+                                ? 'text-red-600 hover:text-red-900'
+                                : 'text-green-600 hover:text-green-900'
+                                }`}
                               title={subscription.is_active ? 'Deactivate' : 'Activate'}
                             >
                               {subscription.is_active ? (
