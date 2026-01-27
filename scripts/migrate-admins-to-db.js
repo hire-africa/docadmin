@@ -1,9 +1,28 @@
 const { Pool } = require('pg');
 
+const fs = require('fs');
+const path = require('path');
+
+// Load .env
+try {
+  const envPath = path.resolve(__dirname, '..', '.env');
+  if (fs.existsSync(envPath)) {
+    const envConfig = fs.readFileSync(envPath, 'utf8');
+    envConfig.split('\n').forEach(line => {
+      const match = line.match(/^([^=]+)=(.*)$/);
+      if (match) {
+        process.env[match[1].trim()] = match[2].trim().replace(/^["'](.*)["']$/, '$1');
+      }
+    });
+  }
+} catch (e) { }
+
 // Database connection
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: false
+  ssl: {
+    rejectUnauthorized: false
+  }
 });
 
 // Admin accounts to migrate
@@ -58,15 +77,16 @@ async function migrateAdminsToDatabase() {
         // Create new admin user
         const result = await client.query(`
           INSERT INTO users (
-            email, first_name, last_name, user_type, status, 
+            email, first_name, last_name, user_type, password, status, 
             is_active, created_at, updated_at
-          ) VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
           RETURNING id
         `, [
           admin.email,
           admin.name.split(' ')[0], // first_name
           admin.name.split(' ').slice(1).join(' '), // last_name
           'admin',
+          '$2a$10$PlaceholderPasswordHashForAdminsOnly', // dummy hash
           'approved',
           true
         ]);

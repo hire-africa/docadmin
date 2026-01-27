@@ -8,8 +8,9 @@ export async function PATCH(
 ) {
   try {
     const token = request.headers.get('authorization')?.replace('Bearer ', '');
+    const decoded = token ? verifyToken(token) : null;
 
-    if (!token || !verifyToken(token)) {
+    if (!token || !decoded) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
 
@@ -59,10 +60,18 @@ export async function PATCH(
       } else {
         // 2. Treat as actual ID (from admins table)
         try {
-          const checkAdminQuery = `SELECT id FROM admins WHERE id = $1`;
+          const checkAdminQuery = `SELECT email FROM admins WHERE id = $1`;
           const checkAdminResult = await query(checkAdminQuery, [completed_by]);
           if (checkAdminResult.rows.length > 0) {
-            adminUserId = checkAdminResult.rows[0].id;
+            const email = checkAdminResult.rows[0].email;
+            // Now find this email in the users table
+            const userQuery = `SELECT id FROM users WHERE email = $1`;
+            const userResult = await query(userQuery, [email]);
+            if (userResult.rows.length > 0) {
+              adminUserId = userResult.rows[0].id;
+            } else {
+              console.log(`Admin with email ${email} not found in users table. This will cause a foreign key violation.`);
+            }
           } else {
             return NextResponse.json(
               { message: 'Invalid admin ID provided. Admin not found.' },
@@ -76,6 +85,19 @@ export async function PATCH(
             { status: 400 }
           );
         }
+      }
+    }
+
+    // Fallback to decoded token email if adminUserId still null
+    if (!adminUserId && decoded) {
+      try {
+        const userQuery = `SELECT id FROM users WHERE email = $1`;
+        const userResult = await query(userQuery, [decoded.email]);
+        if (userResult.rows.length > 0) {
+          adminUserId = userResult.rows[0].id;
+        }
+      } catch (error) {
+        console.error('Error fallback admin lookup:', error);
       }
     }
 

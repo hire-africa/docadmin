@@ -24,12 +24,14 @@ if (process.env.DB_HOST) {
 
   if (dbConfig.host.includes('.i.db.ondigitalocean.com')) {
     console.warn('⚠️  WARNING: Using INTERNAL database host (.i.). This will only work from within DigitalOcean VPC.');
+    console.warn('👉 If you are developing locally, please use the PUBLIC connection string from DigitalOcean.');
   }
 } else if (connectionString) {
   console.log('🔗 Using DATABASE_URL connection string');
   dbConfig.connectionString = connectionString;
   if (connectionString.includes('.i.db.ondigitalocean.com')) {
     console.warn('⚠️  WARNING: Using INTERNAL database host (.i.). This will only work from within DigitalOcean VPC.');
+    console.warn('👉 If you are developing locally, please use the PUBLIC connection string from DigitalOcean.');
   }
 } else {
   console.error('❌ No database configuration found (DB_HOST or DATABASE_URL)');
@@ -48,13 +50,16 @@ export async function query(text: string, params?: any[]) {
     const result = await client.query(text, params);
     console.log('Query result:', result.rows.length, 'rows');
     return result;
-  } catch (error) {
-    console.error('Database query error:', error);
-    console.error('Query:', text);
-    console.error('Params:', params);
+  } catch (error: any) {
+    if (error.message.includes('timeout')) {
+      console.error('❌ DATABASE CONNECTION TIMEOUT');
+      console.error('Check if your IP is added to the "Trusted Sources" in DigitalOcean.');
+      console.error('Also verify you are using the PUBLIC connection string, not the internal one.');
+    }
+    console.error('Database query error:', error.message);
     throw error;
   } finally {
-    client.release();
+    if (client) client.release();
   }
 }
 
