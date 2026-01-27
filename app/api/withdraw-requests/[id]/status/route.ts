@@ -8,7 +8,7 @@ export async function PATCH(
 ) {
   try {
     const token = request.headers.get('authorization')?.replace('Bearer ', '');
-    
+
     if (!token || !verifyToken(token)) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
@@ -34,15 +34,17 @@ export async function PATCH(
     // Get the actual admin user ID from the database if completed_by is provided
     let adminUserId = null;
     if (completed_by) {
-      // Map hardcoded admin IDs to actual user IDs in the database
+      // 1. Check if it's a legacy hardcoded ID
       const adminEmailMap: { [key: string]: string } = {
         'admin-1': 'blacksleeky84@gmail.com',
-        'admin-2': 'admin@docavailable.com', 
+        'admin-2': 'admin@docavailable.com',
         'admin-3': 'macnyoni4@gmail.com'
       };
-      
+
       const adminEmail = adminEmailMap[completed_by];
+
       if (adminEmail) {
+        // Legacy lookup in users table
         try {
           const adminQuery = `SELECT id FROM users WHERE email = $1 AND user_type = 'admin'`;
           const adminResult = await query(adminQuery, [adminEmail]);
@@ -50,17 +52,30 @@ export async function PATCH(
             adminUserId = adminResult.rows[0].id;
           } else {
             console.log(`Admin user not found in database for email: ${adminEmail}. Proceeding with NULL paid_by.`);
-            // Continue with adminUserId = null (will be stored as NULL in database)
           }
         } catch (error) {
-          console.log(`Error looking up admin user: ${error instanceof Error ? error.message : 'Unknown error'}. Proceeding with NULL paid_by.`);
-          // Continue with adminUserId = null (will be stored as NULL in database)
+          console.log(`Error looking up legacy admin user: ${error instanceof Error ? error.message : 'Unknown error'}.`);
         }
       } else {
-        return NextResponse.json(
-          { message: 'Invalid admin ID provided' },
-          { status: 400 }
-        );
+        // 2. Treat as actual ID (from admins table)
+        try {
+          const checkAdminQuery = `SELECT id FROM admins WHERE id = $1`;
+          const checkAdminResult = await query(checkAdminQuery, [completed_by]);
+          if (checkAdminResult.rows.length > 0) {
+            adminUserId = checkAdminResult.rows[0].id;
+          } else {
+            return NextResponse.json(
+              { message: 'Invalid admin ID provided. Admin not found.' },
+              { status: 400 }
+            );
+          }
+        } catch (error) {
+          console.error('Error verifying admin ID:', error);
+          return NextResponse.json(
+            { message: 'Error verifying admin ID' },
+            { status: 400 }
+          );
+        }
       }
     }
 
@@ -77,7 +92,7 @@ export async function PATCH(
     `;
 
     const requestResult = await query(getRequestQuery, [id]);
-    
+
     if (requestResult.rows.length === 0) {
       return NextResponse.json(
         { message: 'Withdrawal request not found' },
@@ -104,9 +119,9 @@ export async function PATCH(
         SELECT id, balance FROM doctor_wallets 
         WHERE doctor_id = $1
       `;
-      
+
       const walletResult = await query(walletQuery, [withdrawalRequest.doctor_id]);
-      
+
       if (walletResult.rows.length === 0) {
         // Create a new wallet for the doctor if it doesn't exist
         const createWalletQuery = `
@@ -123,7 +138,7 @@ export async function PATCH(
         SET balance = balance - $1, updated_at = NOW()
         WHERE doctor_id = $2
       `;
-      
+
       await query(updateWalletQuery, [withdrawalRequest.amount, withdrawalRequest.doctor_id]);
 
       // Add a transaction record to the wallet transactions
@@ -147,11 +162,11 @@ export async function PATCH(
           NOW()
         )
       `;
-      
+
       await query(addTransactionQuery, [
         withdrawalRequest.amount,
-        withdrawalRequest.payment_method === 'bank_transfer' ? 'Bank Transfer' : 
-        withdrawalRequest.payment_method === 'mobile_money' ? 'Mobile Money' : 'Mzunguko',
+        withdrawalRequest.payment_method === 'bank_transfer' ? 'Bank Transfer' :
+          withdrawalRequest.payment_method === 'mobile_money' ? 'Mobile Money' : 'Mzunguko',
         withdrawalRequest.doctor_id
       ]);
 
